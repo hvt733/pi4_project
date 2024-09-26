@@ -1,0 +1,45 @@
+//   function fetchThresholdsFromDatabase() {
+//     const today = new Date();
+//     const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    
+//     const dbRef = ref(db, `/${dateKey}`);
+    
+//     get(dbRef).then((snapshot) => {
+//         const data = snapshot.val();
+//         // console.log('Data received for thresholds:', data); // Kiểm tra dữ liệu đầu vào
+        
+//         if (data) {
+//             const tempData = data['TemperatureC'];
+//             const humidityData = data['Humidity'];
+
+//             if (tempData && humidityData) {
+//                 // Update THRESHOLD for TemperatureC & TemperatureF
+//                 chart1.options.scales['y-axis-1'].ticks.min = tempData.LOW_THRESHOLD || 0;
+//                 chart1.options.scales['y-axis-1'].ticks.max = tempData.HIGH_THRESHOLD || 50;
+//                 chart1.options.scales['y-axis-2'].ticks.min = ((tempData.LOW_THRESHOLD * 9 / 5) + 32) || 32;
+//                 chart1.options.scales['y-axis-2'].ticks.max = ((tempData.HIGH_THRESHOLD * 9 / 5) + 32) || 122;
+
+//                 // Update THRESHOLD for Humidity
+//                 chart2.options.scales['y-axis-1'].ticks.min = humidityData.LOW_THRESHOLD || 0;
+//                 chart2.options.scales['y-axis-1'].ticks.max = humidityData.HIGH_THRESHOLD || 100;
+
+//                 // Check values of THRESHOLD
+//                 // console.log('TemperatureC_LOW:', tempData.LOW_THRESHOLD);
+//                 // console.log('TemperatureC_HIGH:', tempData.HIGH_THRESHOLD);
+//                 // console.log('Humidity_LOW:', humidityData.LOW_THRESHOLD);
+//                 // console.log('Humidity_HIGH:', humidityData.HIGH_THRESHOLD);
+
+//                 // Update Charts
+//                 chart1.update();
+//                 chart2.update();
+//             } else {
+//                 console.warn('Temperature or Humidity data is missing:', data);
+//             }
+//         } else {
+//             console.warn(`Data is missing for ${dateKey}:`, data);
+//         }
+//     }).catch((error) => {
+//         console.error('Error fetching data from Firebase:', error);
+//     });
+// }
+

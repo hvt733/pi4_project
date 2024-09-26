@@ -1,0 +1,724 @@
+
+#part1{
+    display: block;
+}
+#main{
+    display: block;
+}
+#part_admin{
+    display: block;
+}
+
+.modal h2{
+    text-align: center;
+    font-weight: 600;
+    font-size: 30px;
+}
+
+.button_log_out {
+    display: flex;
+    justify-content: flex-end; /* Đẩy nút về bên phải */
+    align-items: center; /* Căn giữa theo chiều dọc */
+    width: 100%; /* Đảm bảo phần tử này chiếm toàn bộ chiều rộng */
+    /* align-items: center; */
+}
+.button_log_out i{
+    margin-right: 10px;
+}
+#button_logout_admin,
+#button_logout_user {
+    border: 1px solid white !important;
+    background-color: white !important;
+    color: black;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    margin: 0px 10px 0px 100px;
+}
+#button_logout_admin:hover,
+#button_logout_user:hover {
+    background-color: lightgray !important; /* Thêm hiệu ứng khi hover */
+}
+
+
+
+
+
+
+
+
+#statusBox1 {
+    border-radius: 50px;
+    width: 100px;
+    height: 100px; 
+    background-color: green; 
+    position: relative;
+    left: 20%;
+    transform: translateX(-50%);
+}
+
+#alarmTable .hello{
+    background-color: aqua !important;
+}
+
+
+#statusBox1 p{
+   position: absolute;
+   top: 50%;
+   left: 50%;
+   transform: translate(-50%,-50%);
+   color: white;
+   text-align: center;
+   font-size: 16px;
+   font-weight: 500;
+}
+.insite_box2{
+    padding: 15px;
+    background-color: whitesmoke;
+    border: 2px solid black;
+    /* display: flex; */
+
+}
+#dev3 .insite_box2{
+    padding: 15px;
+    background-color: whitesmoke;
+    border: 2px solid black;
+    /* display: flex; */
+    /* height: 100vh; */
+}
+
+#myChart3, #myChart4 {
+    /* width: 100px;
+    height: 200px; */
+    position: relative;
+    left: 50%;
+    transform: translateX(-35%);
+    aspect-ratio: auto 800 / 400;
+}
+#myChart1, #myChart2{
+    width: 400px;
+    height: 200px;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.title h1{
+    font-size: 50px;
+    text-align: center;
+}
+
+/* New */
+.main_content{
+    margin: 0;
+    display: flex;
+    width: 100%;
+    /* height: 200vh; */
+    /* background-color: red;  */
+}
+.main_content .task_table{
+    /* width: 15%; */
+    background-color: black;
+    /* height: 100vh; */
+}
+
+.main_content .table_content{
+    /* width: 85%; */
+    background-color: #adadad;
+    /* height: 100vh; */
+}
+.main_content .table_content_admin{
+    height: 100vh;
+    background-color: #adadad;
+}
+
+/* LEFT */
+
+.logo_part{
+    display: flex;
+    height: auto;
+    width: 100%;
+    padding: 10px;
+    background-color: rgba(0, 0, 255, 0.45);
+}
+.logo_part .image_company img{
+    width: 80%;
+    height: auto;
+    /* object-fit: cover; */
+    /* padding: 15px 0; */
+}
+
+.logo_part .title h3{
+    text-align: center;
+    color: aliceblue;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+
+    font-size: 25px;
+    font-weight: 600;
+}
+
+
+/* RIGHT */
+.table_content_admin .top_content{
+    margin: 0px 15px 20px 15px;
+    background-color: rgb(255, 255, 255);
+    /* height: 35px; */
+    padding: 10px 0;
+    /* margin-bottom: 20px; */
+    align-items: center;
+
+}
+.table_content .top_content{
+    margin: 0px 15px 20px 15px;
+    background-color: rgb(255, 255, 255);
+    /* height: 35px; */
+    padding: 10px 0;
+    /* margin-bottom: 20px; */
+    align-items: center;
+    border: 2px solid black;
+}
+/* .table_content .bottom_content{
+    display: none;
+} */
+/* .table_content .bottom_content .active{
+    display: block;
+} */
+.table_content .bottom_content{
+    background-color: #adadad;
+    height:20%;
+    margin: 0px 15px 0;
+}
+
+.table_content_admin .bottom_content{
+    background-color: #adadad;
+    height:20%;
+    margin: 0px 15px 0;
+}
+.table_content .bottom_content_admin{
+    background-color: #adadad;
+    height:20%;
+    margin: 0px 15px 0;
+}
+
+.table_content_admin .bottom_content_admin{
+    background-color: #adadad;
+    height:20%;
+    margin: 0px 15px 0;
+}
+/*  */
+
+.sensor_box .sensor_title{
+    padding: 15px 0;
+    background-color: whitesmoke;
+    border: 2px solid black;
+    border-bottom: 0px;
+    display: flex;
+    justify-content: space-between;
+}
+.sensor_title i {
+    font-size: 20px; /* Thay đổi kích thước icon nếu cần */
+    padding: 0px 10px 0px 0px;
+}
+.sensor_box .sensor_title h3{
+    font-size: 18px;
+    font-weight: 600;
+    padding: 0px 0px 0px 10px;
+    position: relative;
+}
+
+.sensor_box .sensor_title h3{
+    font-size: 18px;
+    font-weight: 600;
+    padding: 0px 0px 0px 10px;
+    position: relative;
+}
+
+/* .sensor_box .sensor_title p {
+    position: relative;
+    background-color: red;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 19px;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    left: -8%;
+
+} */
+/* .sensor_box .sensor_title h3::after {
+    content: "off";
+    position: absolute;
+    right: -50px;
+    top: 0;
+    background-color: green;
+    color: white;
+    padding: 5px;
+} */
+
+.sensor_box{
+    background-color: #adadad;
+    
+}
+.sensor_box{
+    background-color: #adadad;
+    
+}
+
+/* WEB2 */
+
+.sensor_box_web2_1 .sensor_title,
+.sensor_box_web2_2 .sensor_title{
+    padding: 15px 0;
+    background-color: whitesmoke;
+    border: 2px solid black;
+    border-bottom: 0px;
+}
+.sensor_box_web2_1 .sensor_title h3,
+.sensor_box_web2_2 .sensor_title h3{
+    font-size: 18px;
+    font-weight: 600;
+    padding: 0px 0px 0px 10px;
+}
+
+.sensor_box_web2_1,
+.sensor_box_web2_2{
+    background-color: #adadad;
+    
+}
+.sensor_box_web2_1{
+    background-color: #adadad;
+    
+}
+.sensor_box_web2_2{
+    padding-top: 20px;
+    background-color: #adadad;
+}
+#dev1 .insite_box span{
+    width: 30px;
+} 
+
+.insite_box{
+    padding: 15px;
+    background-color: whitesmoke;
+    border: 2px solid black;
+    /* display: flex; */
+}
+.setting_on_off{
+    border-top: 0px solid black;
+    padding: 15px;
+    background-color: whitesmoke;
+    border-width: 2px 2px 0px 2px; /* Trên, phải, dưới, trái */
+    border-style: solid; /* Kiểu viền là solid */
+    border-color: black; /* Màu viền là đen */
+    /* display: flex; */
+    /* justify-content: space-around; */
+   
+}
+.setting_on_off .line1,
+.setting_on_off .line2{
+
+    display: flex;
+    justify-content: space-around;
+   
+}
+.setting_on_off button{
+    border-radius: 10px;
+}
+#on_Fire,
+#on_Temp_Humi,
+#on_Smoke{
+    background-color: green;
+}
+#off_Fire,
+#off_Temp_Humi,
+#off_Smoke{
+    background-color: red;
+}
+#on_Fire,
+#on_Temp_Humi,
+#on_Smoke,
+#off_Fire,
+#off_Temp_Humi,
+#off_Smoke{
+    color: rgba(255, 255, 255, 0.78);
+}
+#dev1 .a{
+    display: flex;
+}
+.insite_box .show_time{
+    padding-left: 15%;
+}
+
+.insite_box .show_time h3,
+.insite_box .show_time p{
+    padding: 10px 0 0 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+
+#dev4 .line2{
+    padding-top: 0;
+}
+
+.line2{
+    padding-top: 5%;
+}
+
+
+.humi p,
+.temp p{
+    font-weight: 600;
+}
+
+.humi{
+    margin-top: 15px;
+}
+/* Control Min - Max Values Sensor */
+/* #settingsForm{
+    display: none;
+} */
+#showSettingsBtn{
+    margin-bottom: 2%;
+}
+#saveSettingsBtn{
+    margin-top: 2%;
+}
+
+
+/* MENU LEFT */
+.task_table .menu_left_admin,
+.task_table .menu_left {
+    margin: 0 10px 0 10px;
+}
+.task_table .menu_left_admin li,
+.task_table .menu_left li{
+    width: 100%;
+    line-height: 40px;
+    margin: 10% 0;
+ 
+    border: 1px solid white;
+}
+.task_table .menu_left_admin li p,
+.task_table .menu_left li p{
+   font-size: 20px;
+   color:white;
+   text-align: center;
+}
+
+/* HOVER */
+.task_table .menu_left_admin li:hover,
+.task_table .menu_left li:hover {
+    text-align: center;
+    background-color: white;
+    cursor: pointer;
+
+}
+.task_table .menu_left_admin li:hover p,
+.task_table .menu_left li:hover p {
+    cursor: pointer;
+    font-size: 20px;
+    color: black;
+    text-align: center;
+    background-color: white;
+}
+
+
+
+#statusBox_temp_web2, #statusBox_humi_web2 {
+	width: 100%;
+	max-width: 800px;
+}
+
+
+.sensor_box_web2_1 .sensor_title,
+.sensor_box_web2_2 .sensor_title{
+    padding: 15px 0;
+    background-color: whitesmoke;
+    border: 2px solid black;
+    border-bottom: 0px;
+    display: flex;
+    justify-content: space-between;
+}
+.sensor_title i {
+    font-size: 20px; /* Thay đổi kích thước icon nếu cần */
+    padding: 0px 10px 0px 0px;
+}
+
+
+
+
+
+
+
+
+/* Table */
+table {
+    width: 100%;
+    /* border-collapse: collapse; */
+ 
+}
+table, th, td {
+    border: 2px solid black;
+}
+th, td {
+    padding: 10px;
+    text-align: center;
+    vertical-align: middle; /* Căn giữa theo chiều dọc */
+}
+th {
+    /* background-color: #f2f2f2; */
+}
+
+
+tr .NA_info{
+    /* background-color: rgb(111, 109, 109); */
+    
+    /* width: 400px; */
+}
+.threshold_input {
+    display: flex; /* Sử dụng flexbox */
+    justify-content: space-between; /* Tạo khoảng cách giữa các phần tử */
+    align-items: center; /* Căn giữa theo trục dọc */
+}
+input{
+    width: 80px;
+    margin: 3px 0 3px 0;
+}
+
+
+.setting_alarm{
+    border-width: 2px 2px 0px 2px;
+    border-style: solid;
+    border-color: black; 
+    padding: 10px;
+}
+
+
+
+
+
+#admin_dev1 .line2{
+    padding: 0px;
+}
+
+.add_account{
+    padding: 0 15px 15px 15px;
+    border-bottom: 1px solid black;
+    /* border-top: 1px solid black; */
+
+}
+.user_part .add_account{
+    padding: 0px 15px 15px 15px;
+    border-top: 0px solid black;
+}
+.del_account{
+    padding: 15px 15px 0 15px;
+    height: 150px;
+}
+.del_account .col-6{
+    padding: 0;
+
+    
+}
+.del_account .col-6:first-child{
+    margin-right: 15px;
+}
+
+
+
+.add_input,
+.del_account{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.add_account h3{
+    padding: 0px 0px 10px 0;
+    font-weight: 600;
+}
+.del_title h3{
+    padding: 15px 0 0 0;
+    font-weight: 600;
+}
+.add_input input[type="date"],
+.add_input input[type="text"],
+.add_input input[type="password"]{
+    width: 75% ;
+    box-sizing: border-box;
+    border: 2px solid #00000044;
+    border-radius: 5px;
+}
+
+.box_search{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.show_acc{
+    height: 100px;
+}
+
+.show_acc h3{
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+
+.search input[type="text"]{
+    width: 75% ;
+    box-sizing: border-box;
+    border: 2px solid #00000044;
+    border-radius: 5px;
+}
+#add_fire_log,
+#delete_data,
+#add_data,
+#add_ad_account,
+#delete_ad_account,
+#add_code,
+#delete_account,
+#delete_code,
+#add_account{
+    margin: 10px 0 0 0;
+    border-radius: 15px;
+    padding: 5px 15px;
+    background-color: white;
+    border: 1px solid #ddd;
+    float: right; /* Đẩy nút sang bên phải */
+}
+
+#push_thresholds{
+    border-radius: 15px;
+    background-color: white;
+    border: 1px solid #ddd;
+    float: right; /* Đẩy nút sang bên phải */
+    padding: 0 8px;
+}
+#push_thresholds p{
+    font-size: 17px;
+}
+
+#add_fire_log:hover,
+#push_thresholds:hover,
+#add_data:hover,
+#delete_data:hover,
+#add_ad_account:hover,
+#delete_ad_account:hover,
+#add_code:hover,
+#delete_account:hover,
+#delete_code:hover,
+#add_account:hover {
+    cursor: pointer;
+    background-color: #45a049; /* Thay đổi màu khi hover */
+}
+
+#add_fire_log:active,
+#push_thresholds:active,
+#delete_data:active,
+#add_data:active,
+#add_ad_account:active,
+#delete_ad_account:active,
+#add_code:active,
+#delete_account:active,
+#delete_code:active,
+#add_account:active{
+    transform: scale(0.95); /* Thu nhỏ nút khi nhấn */
+    background-color: #3e8e41; /* Thay đổi màu nền khi nhấn */
+}
+
+#delete_account{
+    margin: 15px 0px 15px 0px;
+}
+
+.add_code h3,
+.del_code h3{
+    padding: 0px 0px 10px 0px;
+    font-weight: 600;
+}
+
+.add_code{
+    /* padding: 0px 15px 55px 15px; */
+    border-bottom: 1px solid black;
+    height: 175px;
+}
+
+.del_code{
+    padding: 15px 15px 15px 15px;
+
+}
+
+#recent_codes_list{
+    list-style-type: none;
+    display: flex;
+}
+
+#recent_codes_list li{
+   padding: 0px 10px;
+}
+
+
+#ad_similar_accounts,
+#similar_accounts{
+    list-style-type: none;
+}
+
+
+
+/* Trạng thái hover */
+.lists_acc ul li:hover {
+    background-color: #f0f0f0; /* Màu nền khi hover */
+}
+
+/* Trạng thái active (được chọn) */
+.lists_acc ul li.active {
+    background-color: #adadad; /* Màu nền khi được chọn */
+}
+
+
+.lists_acc {
+    width: auto;
+    height: 100px;
+    overflow-y: scroll;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    padding: 5px;
+    box-sizing: border-box; /* Đảm bảo padding không ảnh hưởng đến chiều cao */
+}
+
+.lists_acc ul li {
+    padding: 10px;
+    cursor: pointer;
+    padding: 4px 4px 4px 10px;
+    border-radius: 11px;
+    /* border: 2px solid black; */
+    background-color: #f1f1f1;
+    margin-bottom: 7px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.lists_acc ul li:hover {
+    background-color: #adadad; /* Màu khi di chuột qua */
+}
+
+
+#scroll_box {
+    /* height: 600px; */
+    overflow-y: scroll; /* Hiển thị thanh cuộn ngang */
+
+    white-space: nowrap; /* Ngăn văn bản xuống dòng để kích hoạt cuộn ngang */
+
+    box-sizing: border-box;
+}
+
+
+.add_account2{
+    padding: 0 15px 15px 15px;
+    /* border-top: 1px solid black; */
+}

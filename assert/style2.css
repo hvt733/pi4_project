@@ -1,0 +1,285 @@
+/* 
+ul ,li{
+	list-style-type: none;
+	background: white;
+} */
+
+
+
+.header {
+    position: relative;
+    margin-top: 40px;
+    display: block;
+}
+
+.nav_left{
+    padding-left: 15px;
+    display: flex;
+}
+
+
+.nav_left li {
+    position: relative;
+    padding-right: 20px;
+    font-family: istok;
+    color: black;
+    list-style-type: none;
+	background: white;
+}
+
+ .nav_left li a {
+    font-size: 24px;
+    color: black;
+    text-decoration: none;
+    position: relative;
+}
+
+.nav_left li a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background-color: black;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+
+.nav_right {
+    display: flex;
+    background-color: white;
+    position: absolute;
+    top: 0;
+    transform: translateX(-35%);
+    right: 0%;
+    background-color: #f5f5f5;
+    list-style-type: none;
+	background: white;
+}
+.nav_right li a {
+    height: 100%;
+    width: auto;
+    margin-left: 20px;
+}
+
+
+.nav_right li img {
+    height: 20px;
+    width: 30px;
+
+}
+.nav_left li a:hover::after {
+    opacity: 1;
+}
+img {
+    vertical-align: middle;
+    border-style: none;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Đặt toàn bộ trang nền tối khi popup hiện */
+body.modal-active {
+    overflow: hidden;
+}
+
+/* Hộp popup */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+/* Nội dung popup */
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative; /* Thêm position: relative để căn chỉnh nút đóng chính xác */
+}
+
+/* Đầu của popup */
+.modal-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0px 0px 10px 0px;
+    text-align: right;
+}
+/* Nút đóng */
+.close-btn {
+    color: rgb(56, 56, 56);
+    border: none;
+    border-radius: 50%;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+ 
+}
+
+/* Các trường input */
+#loginForm input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    box-sizing: border-box;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Nút đăng nhập */
+.logout-btn,
+.login-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+}
+.logout-btn p,
+.login-btn p{
+    margin: 0;
+    font-family: mont;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.logout-btn:hover,
+.login-btn:hover {
+    background-color: #45a049;
+}
+
+.button_login {
+    border: 1px solid white !important;
+    background-color: white !important;
+    color: black;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    top: -10%;
+}
+.button_login:hover {
+    background-color: lightgray !important; /* Thêm hiệu ứng khi hover */
+}
+
+
+
+.logo_icon {
+    display: flex;
+    justify-content: center; /* Căn giữa theo chiều ngang */
+    align-items: center; /* Căn giữa theo chiều dọc nếu cần */
+}
+
+.logo_icon img {
+    position: absolute;
+    top: -80%;
+    /* height: 40px; */
+    width: 20%;
+}
+
+.home_page_component {
+    padding: 72px 0;
+}
+
+.image_left {
+    width: 500px;
+    height: auto;
+}    
+.image_left img {
+    width: 80%;
+    height: auto;
+    margin-left: 10%;
+}
+.box_text_right h1 {
+    font-family: mont;
+    font-size: 55px;
+    color: var(--F1F-color);
+    line-height: 64px;
+    margin-bottom: 20px;
+}
+
+
+.box_text_right .col-12:nth-of-type(2) p {
+    margin: 20px 0;
+    font-family:  quick;
+    font-size: 20px;
+    text-align: justify;
+}
+
+.box_bottom .bb_left button {
+    padding: 15px;
+    border-radius: 5px;
+    border: 2px solid black;
+}
+
+
+/* .box_text_right .bb_left button a {
+    display: flex;
+} */
+
+
+
+.box_bottom .bb_left p {
+    font-family: mont;
+    font-size: 20px;
+    font-weight: 300;
+    /* letter-spacing: 1.5; */
+    color: black;
+    /* letter-spacing: 3px; */
+}
+
+
+.box_bottom .bb_left i {
+    color: white;
+    margin: 15px 0 15px 10px;
+}
+
+.box_text_right a {
+    text-decoration: none;
+}
+
+

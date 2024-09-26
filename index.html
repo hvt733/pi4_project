@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Realtime Database</title>
+
+    <link rel="icon" href="./assert/img/logo.png" type="icon">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.3/dist/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://kit.fontawesome.com/9f25d43b0a.js" crossorigin="anonymous"></script>
+    
+    <title>Sensor Status</title>
+    <link rel="stylesheet" href="./assert/reset.css">
+    <link rel="stylesheet" href="./assert/style.css">
+    <link rel="stylesheet" href="./assert/style2.css">
+    
+
+    <script type="module">
+      let fireDetectedTime = null;
+      let fireDetected = false;
+      // let tempMin = 0;
+      // let tempMax = 60;
+      // let humiMin = 0;
+      // let humiMax = 100;
+      let chart1;
+      let chart2;
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import { getDatabase, ref, set, remove, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+      // import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+  
+
+      const firebaseConfig = {
+          apiKey: "AIzaSyCTv0WFKuNafqszXmI40v_DIOVPkNqp-78",
+          authDomain: "monitoring-sensor-4e47e.firebaseapp.com",
+          databaseURL: "https://monitoring-sensor-4e47e-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "monitoring-sensor-4e47e",
+          storageBucket: "monitoring-sensor-4e47e.appspot.com",
+          messagingSenderId: "935434093765",
+          appId: "1:935434093765:web:35353ee82daebe23e6dcac",
+          measurementId: "G-B6MXC3TY4R"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      const dbRef = ref(db); // Trỏ đến root để lấy tất cả các ngày
+  
+    let chartInstanceTemp = null; // Biến để lưu trữ đối tượng biểu đồ nhiệt độ
+    let chartInstanceHumi = null; // Biến để lưu trữ đối tượng biểu đồ độ ẩm
+
+
+
+
+
+
+
+
+// Chuyển chuỗi sang nhị phân
+function stringToBinary(str) {
+    return str.split('').map(char => {
+        return char.charCodeAt(0).toString(2).padStart(8, '0'); // Biến từng ký tự thành mã nhị phân 8 bit
+    }).join('');
+}
+
+// XOR hai chuỗi nhị phân
+function xorBinary(bin1, bin2) {
+    let result = '';
+    for (let i = 0; i < bin1.length; i++) {
+        // XOR từng bit một
+        result += bin1[i] === bin2[i % bin2.length] ? '0' : '1';
+    }
+    return result;
+}
+
+// Chuyển nhị phân thành chuỗi hex
+function binaryToHex(bin) {
+    return parseInt(bin, 2).toString(16).padStart(Math.ceil(bin.length / 4), '0');
+}
+
+// Đảo ngược chuỗi
+function reverseString(str) {
+    return str.split('').reverse().join('');
+}
+
+// Hàm mã hóa mật khẩu
+function EncryptPassword(username, password, code) {
+    // Chuyển các chuỗi thành nhị phân
+    const key1 = stringToBinary(username); // tên user
+    const key2 = stringToBinary(password); // mật khẩu
+    const key3 = stringToBinary(code); // code người dùng
+    const key4 = stringToBinary(username + password); // tên người dùng + mật khẩu
+    const key5 = stringToBinary(reverseString(code)); // ngược lại của code
+    const key7 = stringToBinary(reverseString(password)); // ngược lại của mật khẩu
+    const key8 = stringToBinary(reverseString(username)); // ngược lại của tên user
+
+    // Chuyển mật khẩu thành nhị phân
+    let binaryPassword = stringToBinary(username + password + code);
+
+    // Thực hiện XOR lần lượt với các key
+    binaryPassword = xorBinary(binaryPassword, key1);
+    binaryPassword = xorBinary(binaryPassword, key2);
+    binaryPassword = xorBinary(binaryPassword, key3);
+    binaryPassword = xorBinary(binaryPassword, key4);
+    binaryPassword = xorBinary(binaryPassword, key5);
+    binaryPassword = xorBinary(binaryPassword, key7);
+    binaryPassword = xorBinary(binaryPassword, key8);
+
+    // Chuyển kết quả XOR cuối cùng thành mã Hex
+    const hexPassword = binaryToHex(binaryPassword);
+
+    // Trả về mã Hex cuối cùng
+    return hexPassword;
+}
+
+
+    function checklogin(username, password, code) {
+    // Chuyển username, password và code thành string
+    username = username.toString().trim();
+    password = password.toString().trim();
+    code = code ? code.toString().trim() : '';  // Nếu không có code thì gán là chuỗi rỗng
+
+    // Kiểm tra xem username và password có chứa ký tự đặc biệt hay không
+    const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+    if (specialCharPattern.test(username) || specialCharPattern.test(password)) {
+        alert('Username và password không được chứa ký tự đặc biệt!');
+        return;
+    }
+    console.log('Username:', username);
+    console.log('Password:', password);
+    console.log('Code:', code);
+
+  
+    // Mã hóa mật khẩu mà người dùng đã nhập
+    const encryptedInputPassword = EncryptPassword(username, password, code);
+
+    
+
+    const dbRef = ref(db, 'Account Index');
+    get(dbRef).then((snapshot) => {
+        if (snapshot.exists()) {
+            const accounts = snapshot.val();
+            let isLoginSuccess = false;  // Thêm biến để theo dõi trạng thái đăng nhập
+
+            // Kiểm tra xem có code không
+
+              console.log('Code:', code);
+              console.log('Encrypted Input Password:', encryptedInputPassword);
+              code = 1;
+                // Không có code => Đăng nhập admin
+                if (accounts['Admin']) {
+                    for (let adminName in accounts['Admin']) {
+                        const adminAccount = accounts['Admin'][adminName];
+
+                        // So sánh username và mật khẩu đã mã hóa
+                        if (adminName === username && adminAccount.Pass === encryptedInputPassword) {
+                            console.log('Login success with admin account:', adminName);
+                            closeModal(); // Đóng modal
+                            window.location.href = 'controlle.html';
+                            isLoginSuccess = true;  // Đánh dấu là đăng nhập thành công
+                            break;  // Thoát khỏi vòng lặp khi đăng nhập thành công
+                        }
+                    }
+                }
+
+                // Có code => Đăng nhập người dùng
+                if (accounts['Users']) {
+                    for (let userUsername in accounts['Users']) {
+                        const userAccount = accounts['Users'][userUsername];
+
+                        // So sánh username và mật khẩu đã mã hóa
+                        if (userUsername === username && userAccount.Pass === encryptedInputPassword) {
+                            console.log('Login success with user account:', userUsername);
+                            closeModal(); // Đóng modal
+                            window.location.href = 'home.html';
+                            isLoginSuccess = true;  // Đánh dấu là đăng nhập thành công
+                            break;  // Thoát khỏi vòng lặp khi đăng nhập thành công
+                        }
+                    }
+                }
+
+
+            // Nếu duyệt qua hết danh sách mà không đăng nhập thành công
+            if (!isLoginSuccess) {
+                alert('Login failed with account: ' + username);
+            }
+
+        } else {
+            console.log('Không có người dùng nào trong cơ sở dữ liệu');
+        }
+    }).catch((error) => {
+        console.error('Lỗi khi truy xuất dữ liệu:', error);
+    });
+
+    return false; // Ngăn form gửi dữ liệu nếu hàm được gọi từ một form
+}
+
+
+  // Làm hàm checkUser khả dụng bên ngoài module
+  window.checklogin = checklogin;
+
+
+  </script>
+</head>
+<body>
+
+
+  <!-- Home Page -->
+  <div id="main">
+    <div class="header">
+      <div class="container">
+        <div class="row">
+          <div class="col-4">
+            <ul class="nav_left">
+              <li><a href="">Home</a></li>
+              <li><a href="">About</a></li>
+              <li><a href="">Projects</a></li>
+              <li><a href="">Contact</a></li>
+            </ul>
+          </div>
+  
+          <div class="col-4">
+            <div class="logo_icon">
+              <img src="/assert/img/logo.png" alt="">
+            </div>
+          </div>
+  
+          <div class="col-4">
+            <div class="nav_right">
+              <li><button class="button_login" onclick="openModal()"><i class="fa-solid fa-right-to-bracket"></i></button></li>
+              <li></li>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+    </div>
+  
+     <div class="home_page_component">
+      <div class="container">
+        <div class="row">
+          <div class="col-6">
+            <div class="image_left">
+              <img src="/assert/img/logo.png" alt="">
+            </div>
+          </div>
+  
+          <div class="col-6">
+            <div class="box_text_right">
+              <div class="row">
+                <div class="col-12">
+                  <h1>Are You Prepared for Fire Emergencies?</h1>
+                </div>
+  
+                <div class="col-12">
+                  <p>We guarantee the security of your property with our cutting-edge fire and explosion detection system, which offers real-time monitoring and alerts. Our system, which is outfitted with temperature sensors and other cutting-edge technology, keeps you safe and prepared.</p>
+                </div>
+  
+                <div class="col-12">
+                  <div class="box_bottom">
+                    <div class="row">
+                      <div class="col-6">
+                        <div class="bb_left">
+                          <button class="button_login" onclick="openModal()"><p>Login With Us!</p></button>
+                        </div>
+                      </div>
+  
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+  
+        </div>
+  
+  
+   
+      </div>
+      
+    </div>
+      
+  
+    <div id="loginModal" class="modal">
+      <div class="modal-content">
+          <div class="modal-header">
+              
+              <button class="close-btn" onclick="closeModal()">X</button>
+          </div>
+          
+          <form id="loginForm">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="code" placeholder="Code">
+            <button type="submit" class="login-btn">Login</button>
+          </form>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+
+ <script>
+ document.getElementById("loginForm").addEventListener("submit", function(event) {
+    event.preventDefault();  // Ngăn form submit
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const code = document.getElementById("code").value;
+    checklogin(username, password, code);  // Gọi hàm checklogin
+  });
+  // Mở modal
+  function openModal() {
+      document.getElementById("loginModal").style.display = "flex";
+      document.body.classList.add("modal-active");
+  }
+
+  // Đóng modal
+  function closeModal() {
+      document.getElementById("loginModal").style.display = "none";
+      document.body.classList.remove("modal-active");
+  }
+
+</script> 
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

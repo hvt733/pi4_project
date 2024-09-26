@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Realtime Database</title>
+
+    <link rel="icon" href="./assert/img/logo.png" type="icon">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.3/dist/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://kit.fontawesome.com/9f25d43b0a.js" crossorigin="anonymous"></script>
+    
+    <title>Sensor Status</title>
+    <link rel="stylesheet" href="./assert/reset.css">
+    <link rel="stylesheet" href="./assert/style.css">
+    <link rel="stylesheet" href="./assert/style2.css">
+    
+
+    <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import { getDatabase, ref, set, remove, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+      // import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+  
+
+      const firebaseConfig = {
+          apiKey: "AIzaSyCTv0WFKuNafqszXmI40v_DIOVPkNqp-78",
+          authDomain: "monitoring-sensor-4e47e.firebaseapp.com",
+          databaseURL: "https://monitoring-sensor-4e47e-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "monitoring-sensor-4e47e",
+          storageBucket: "monitoring-sensor-4e47e.appspot.com",
+          messagingSenderId: "935434093765",
+          appId: "1:935434093765:web:35353ee82daebe23e6dcac",
+          measurementId: "G-B6MXC3TY4R"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      const dbRef = ref(db); // Trỏ đến root để lấy tất cả các ngày
+  
+
+// MM Delete Account
+
+const accountList = document.getElementById('account_list');
+const searchInput = document.getElementById('search');
+const similarAccountsList = document.getElementById('similar_accounts');
+let activeUserId = null; // Biến lưu trữ ID của tài khoản đang được chọn
+
+// Hàm để thêm sự kiện click vào danh sách tài khoản
+function addClickEventToListItems(list) {
+  list.querySelectorAll('li').forEach(item => {
+    item.addEventListener('click', function() {
+      // Xóa lớp active khỏi tất cả các phần tử
+      document.querySelectorAll('#account_list li, #similar_accounts li').forEach(li => li.classList.remove('active'));
+
+      // Đánh dấu tài khoản đang được chọn
+      this.classList.add('active');
+      activeUserId = this.textContent; // Lưu ID của tài khoản đang được chọn
+    });
+  });
+}
+
+// Lấy dữ liệu từ Firebase root và xử lý dữ liệu cần thiết
+onValue(dbRef, (snapshot) => {
+  const usersSnapshot = snapshot.child('Account Index/Users');
+  
+  // Tạo một mảng để lưu các tên người dùng
+  const userNames = [];
+  
+  // Lặp qua từng tài khoản trong "Users" và thêm vào mảng
+  usersSnapshot.forEach((childSnapshot) => {
+    const userName = childSnapshot.key; // Lấy tên người dùng (ví dụ: "nanh", "thanh")
+    userNames.push(userName); // Thêm tên người dùng vào mảng
+  });
+  
+  // Sắp xếp mảng theo thứ tự bảng chữ cái
+  userNames.sort((a, b) => a.localeCompare(b));
+  
+  // Tạo thẻ li và thêm vào danh sách dựa trên mảng đã sắp xếp
+  accountList.innerHTML = '';
+  userNames.forEach((userName) => {
+    const li = document.createElement('li');
+    li.id = `id_${userName}`;
+    li.textContent = userName;
+    
+    accountList.appendChild(li);
+  });
+  
+  addClickEventToListItems(accountList); // Thêm sự kiện click vào danh sách account_list
+  
+  // Tìm kiếm và hiển thị các tài khoản gần giống
+  searchInput.addEventListener('input', function() {
+    const searchValue = searchInput.value.toLowerCase(); // Giá trị tìm kiếm, chuyển về chữ thường
+    similarAccountsList.innerHTML = ''; // Xóa nội dung cũ trước khi thêm mới
+    
+    // Tìm các tài khoản gần giống
+    const similarAccounts = userNames.filter(userName => {
+      return userName.toLowerCase().startsWith(searchValue); // Tìm những tên người dùng bắt đầu với giá trị tìm kiếm
+    });
+    
+    // Hiển thị các tài khoản gần giống
+    similarAccounts.forEach(userName => {
+      const li = document.createElement('li');
+      li.textContent = userName;
+      similarAccountsList.appendChild(li);
+    });
+    
+    addClickEventToListItems(similarAccountsList); // Thêm sự kiện click vào danh sách similar_accounts
+  });
+});
+
+// Xử lý sự kiện khi người dùng nhấp vào nút "Delete Account"
+document.getElementById('delete_account').addEventListener('click', () => {
+  if (activeUserId) {
+    // Thực hiện xóa tài khoản khỏi Firebase
+    const userRef = ref(db, `Account Index/Users/${activeUserId}`);
+    remove(userRef)
+      .then(() => {
+        alert(`User Deleted: ${activeUserId}`);
+        
+        // Cập nhật danh sách tài khoản sau khi xóa
+        accountList.innerHTML = '';
+        similarAccountsList.innerHTML = '';
+        onValue(dbRef, (snapshot) => {
+          const usersSnapshot = snapshot.child('Account Index/Users');
+          const userNames = [];
+          usersSnapshot.forEach((childSnapshot) => {
+            const userName = childSnapshot.key;
+            userNames.push(userName);
+          });
+          userNames.sort((a, b) => a.localeCompare(b));
+          
+          // Cập nhật danh sách account_list
+          userNames.forEach((userName) => {
+            const li = document.createElement('li');
+            li.id = `id_${userName}`;
+            li.textContent = userName;
+            accountList.appendChild(li);
+          });
+          addClickEventToListItems(accountList); // Thêm sự kiện click vào danh sách account_list
+          
+          // Cập nhật danh sách similar_accounts
+          userNames.forEach((userName) => {
+            const li = document.createElement('li');
+            li.textContent = userName;
+            similarAccountsList.appendChild(li);
+          });
+          addClickEventToListItems(similarAccountsList); // Thêm sự kiện click vào danh sách similar_accounts
+        });
+      })
+      .catch((error) => {
+        console.error("Error when delete account ", error);
+      });
+  } else {
+    alert("Please select the account to delete.Vui lòng chọn tài khoản cần xóa.");
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+// MM Delete Account ADMIN
+
+// const accountList_ADMIN = document.getElementById('ad_account_list');
+// const searchInput_ADMIN = document.getElementById('search_admin');
+// const similarAccountsList_ADMIN = document.getElementById('ad_similar_accounts');
+// let activeAdminId = null; // Biến lưu trữ ID của tài khoản đang được chọn
+
+// // Hàm để thêm sự kiện click vào danh sách tài khoản
+// function addClickEventToListItems_ADMIN(list) {
+//   list.querySelectorAll('li').forEach(item => {
+//     item.addEventListener('click', function() {
+//       // Xóa lớp active khỏi tất cả các phần tử
+//       document.querySelectorAll('#ad_account_list li, #ad_similar_accounts li').forEach(li => li.classList.remove('active'));
+
+//       // Đánh dấu tài khoản đang được chọn
+//       this.classList.add('active');
+//       activeAdminId = this.textContent; // Lưu ID của tài khoản đang được chọn
+//     });
+//   });
+// }
+
+// // Lấy dữ liệu từ Firebase root và xử lý dữ liệu cần thiết
+// onValue(dbRef, (snapshot) => {
+//   const adminSnapshot = snapshot.child('Account Index/Admin');
+  
+//   // Tạo một mảng để lưu các tên người dùng
+//   const adminNames = [];
+  
+//   // Lặp qua từng tài khoản trong "Users" và thêm vào mảng
+//   adminSnapshot.forEach((childSnapshot) => {
+//     const adminName = childSnapshot.key; // Lấy tên người dùng (ví dụ: "nanh", "thanh")
+//     adminNames.push(adminName); // Thêm tên người dùng vào mảng
+//   });
+  
+//   // Sắp xếp mảng theo thứ tự bảng chữ cái
+//   adminNames.sort((a, b) => a.localeCompare(b));
+  
+//   // Tạo thẻ li và thêm vào danh sách dựa trên mảng đã sắp xếp
+//   accountList_ADMIN.innerHTML = '';
+//   adminNames.forEach((adminName) => {
+//     const li = document.createElement('li');
+//     li.id = `id_admin_${adminName}`;
+//     li.textContent = adminName;
+    
+//     accountList_ADMIN.appendChild(li);
+//   });
+  
+//   addClickEventToListItems_ADMIN(accountList_ADMIN); // Thêm sự kiện click vào danh sách account_list
+  
+//   // Tìm kiếm và hiển thị các tài khoản gần giống
+//   searchInput_ADMIN.addEventListener('input', function() {
+//     const searchValue_ADMIN = searchInput_ADMIN.value.toLowerCase(); // Giá trị tìm kiếm, chuyển về chữ thường
+//     similarAccountsList_ADMIN.innerHTML = ''; // Xóa nội dung cũ trước khi thêm mới
+    
+//     // Tìm các tài khoản gần giống
+//     const similarAccounts_ADMIN = adminNames.filter(adminName => {
+//       return adminName.toLowerCase().startsWith(searchValue_ADMIN); // Tìm những tên người dùng bắt đầu với giá trị tìm kiếm
+//     });
+    
+//     // Hiển thị các tài khoản gần giống
+//     similarAccounts_ADMIN.forEach(adminName => {
+//       const li = document.createElement('li');
+//       li.textContent = adminName;
+//       similarAccountsList_ADMIN.appendChild(li);
+//     });
+    
+//     addClickEventToListItems_ADMIN(similarAccountsList_ADMIN); // Thêm sự kiện click vào danh sách similar_accounts
+//   });
+// });
+
+// // Xử lý sự kiện khi người dùng nhấp vào nút "Delete Account"
+// document.getElementById('delete_ad_account').addEventListener('click', () => {
+//   if (activeAdminId) {
+//     // Thực hiện xóa tài khoản khỏi Firebase
+//     const adminRef = ref(db, `Account Index/Admin/${activeAdminId}`);
+//     remove(adminRef)
+//       .then(() => {
+//         alert(`Admin Deleted: ${activeAdminId}`);
+        
+//         // Cập nhật danh sách tài khoản sau khi xóa
+//         accountList_ADMIN.innerHTML = '';
+//         similarAccountsList_ADMIN.innerHTML = '';
+//         onValue(dbRef, (snapshot) => {
+//           const adminSnapshot = snapshot.child('Account Index/Admin');
+//           const adminNames = [];
+//           adminSnapshot.forEach((childSnapshot) => {
+//             const adminName = childSnapshot.key;
+//             adminNames.push(adminName);
+//           });
+//           adminNames.sort((a, b) => a.localeCompare(b));
+          
+//           // Cập nhật danh sách account_list
+//           adminNames.forEach((adminName) => {
+//             const li = document.createElement('li');
+//             li.id = `id_admin_${adminName}`;
+//             li.textContent = adminName;
+//             accountList_ADMIN.appendChild(li);
+//           });
+//           addClickEventToListItems_ADMIN(accountList_ADMIN); // Thêm sự kiện click vào danh sách account_list
+          
+//           // Cập nhật danh sách similar_accounts
+//           adminNames.forEach((adminName) => {
+//             const li = document.createElement('li');
+//             li.textContent = adminName;
+//             similarAccountsList_ADMIN.appendChild(li);
+//           });
+//           addClickEventToListItems_ADMIN(similarAccountsList_ADMIN); // Thêm sự kiện click vào danh sách similar_accounts
+//         });
+//       })
+//       .catch((error) => {
+//         console.error("Error when delete account ", error);
+//       });
+//   } else {
+//     alert("Please select the account to delete.Vui lòng chọn tài khoản cần xóa.");
+//   }
+// });
+
+
+
+
+
+
+
+
+
+
+
+const codeList = document.getElementById('code_list');
+const searchCodeInput = document.getElementById('search_code');
+const similarCodesList = document.getElementById('similar_codes');
+let activeCodeKey = null; // Biến lưu trữ mã code đang được chọn
+let activeCodeUsed = false; // Biến lưu trạng thái mã code đã sử dụng hay chưa
+
+// Hàm để thêm sự kiện click vào danh sách mã code
+function addClickEventToCodeListItems(list) {
+  list.querySelectorAll('li').forEach(item => {
+    item.addEventListener('click', function() {
+      // Xóa lớp active khỏi tất cả các phần tử
+      document.querySelectorAll('#code_list li, #similar_codes li').forEach(li => li.classList.remove('active'));
+
+      // Đánh dấu mã code đang được chọn
+      this.classList.add('active');
+      activeCodeKey = this.dataset.codeKey; // Lưu mã code đang được chọn
+      activeCodeUsed = this.dataset.used === "true"; // Lưu trạng thái mã code đã sử dụng hay chưa
+    });
+  });
+}
+
+function fetchCodes() {
+  // Lấy tất cả các mã code từ Firebase
+  onValue(ref(db, 'Account Index/Code'), (codeSnapshot) => {
+    const codes = [];
+    codeSnapshot.forEach((childSnapshot) => {
+      const codeKey = childSnapshot.key;
+      codes.push(codeKey);
+    });
+
+    // Sắp xếp mảng theo thứ tự bảng chữ cái
+    codes.sort((a, b) => a.localeCompare(b));
+    
+    // Lấy tất cả các người dùng từ Firebase
+    onValue(ref(db, 'Account Index/Users'), (userSnapshot) => {
+      const usedCodes = new Set();
+      userSnapshot.forEach((userSnapshot) => {
+        // Giả sử mỗi người dùng có mã code liên quan dưới dạng thuộc tính
+        if (userSnapshot.child('Code').exists()) {
+          usedCodes.add(userSnapshot.child('Code').val());
+        }
+      });
+
+      // Hiển thị danh sách mã code
+      codeList.innerHTML = '';
+      codes.forEach((codeKey) => {
+        const li = document.createElement('li');
+        li.dataset.codeKey = codeKey; // Gán mã code vào dataset của thẻ li
+        li.dataset.used = usedCodes.has(codeKey) ? "true" : "false"; // Gán trạng thái đã sử dụng vào dataset
+
+        if (usedCodes.has(codeKey)) {
+          li.textContent = `${codeKey} (Used)`; // Nếu mã code đã sử dụng, thêm chú thích
+        } else {
+          li.textContent = codeKey;
+        }
+
+        codeList.appendChild(li);
+      });
+      addClickEventToCodeListItems(codeList); // Thêm sự kiện click vào danh sách code_list
+      
+      // Tìm kiếm và hiển thị các mã code gần giống
+      searchCodeInput.addEventListener('input', function() {
+        const searchValue = searchCodeInput.value.toLowerCase(); // Giá trị tìm kiếm, chuyển về chữ thường
+        similarCodesList.innerHTML = ''; // Xóa nội dung cũ trước khi thêm mới
+        
+        // Tìm các mã code gần giống
+        const similarCodes = codes.filter(codeKey => {
+          return codeKey.toLowerCase().startsWith(searchValue); // Tìm những mã code bắt đầu với giá trị tìm kiếm
+        });
+        
+        // Hiển thị các mã code gần giống
+        similarCodes.forEach(codeKey => {
+          const li = document.createElement('li');
+          li.dataset.codeKey = codeKey; // Gán mã code vào dataset của thẻ li
+          li.dataset.used = usedCodes.has(codeKey) ? "true" : "false"; // Gán trạng thái đã sử dụng vào dataset
+          
+          if (usedCodes.has(codeKey)) {
+            li.textContent = `${codeKey} (Used - đã sử dụng)`; // Nếu mã code đã sử dụng, thêm chú thích
+          } else {
+            li.textContent = codeKey;
+          }
+          
+          similarCodesList.appendChild(li);
+        });
+        
+        addClickEventToCodeListItems(similarCodesList); // Thêm sự kiện click vào danh sách similar_codes
+      });
+    });
+  });
+}
+
+// Gọi hàm để lấy danh sách mã code
+fetchCodes();
+
+// Xử lý sự kiện khi người dùng nhấp vào nút "Delete Code"
+document.getElementById('delete_code').addEventListener('click', () => {
+  if (activeCodeKey) {
+    if (activeCodeUsed) {
+      alert(`Cannot delete code "${activeCodeKey}" because it is in use by a user.`);
+    } else {
+      // Thực hiện xóa mã code khỏi Firebase
+      const codeRef = ref(db, `Account Index/Code/${activeCodeKey}`);
+      remove(codeRef)
+        .then(() => {
+          alert(`Code Deleted: ${activeCodeKey}`);
+          
+          // Cập nhật danh sách mã code sau khi xóa
+          codeList.innerHTML = '';
+          similarCodesList.innerHTML = '';
+          fetchCodes(); // Gọi lại hàm để làm mới danh sách mã code
+        })
+        .catch((error) => {
+          console.error("Error when deleting code: ", error);
+        });
+    }
+  } else {
+    alert("Please select a code to delete.");
+  }
+});
+
+
+
+
+
+
+
+
+// Chuyển chuỗi sang nhị phân
+function stringToBinary(str) {
+    return str.split('').map(char => {
+        return char.charCodeAt(0).toString(2).padStart(8, '0'); // Biến từng ký tự thành mã nhị phân 8 bit
+    }).join('');
+}
+
+// XOR hai chuỗi nhị phân
+function xorBinary(bin1, bin2) {
+    let result = '';
+    for (let i = 0; i < bin1.length; i++) {
+        // XOR từng bit một
+        result += bin1[i] === bin2[i % bin2.length] ? '0' : '1';
+    }
+    return result;
+}
+
+// Chuyển nhị phân thành chuỗi hex
+function binaryToHex(bin) {
+    return parseInt(bin, 2).toString(16).padStart(Math.ceil(bin.length / 4), '0');
+}
+
+// Đảo ngược chuỗi
+function reverseString(str) {
+    return str.split('').reverse().join('');
+}
+
+// Hàm mã hóa mật khẩu
+function EncryptPassword(username, password, code) {
+    // Chuyển các chuỗi thành nhị phân
+    const key1 = stringToBinary(username); // tên user
+    const key2 = stringToBinary(password); // mật khẩu
+    const key3 = stringToBinary(code); // code người dùng
+    const key4 = stringToBinary(username + password); // tên người dùng + mật khẩu
+    const key5 = stringToBinary(reverseString(code)); // ngược lại của code
+    const key7 = stringToBinary(reverseString(password)); // ngược lại của mật khẩu
+    const key8 = stringToBinary(reverseString(username)); // ngược lại của tên user
+
+    // Chuyển mật khẩu thành nhị phân
+    let binaryPassword = stringToBinary(username + password + code);
+
+    // Thực hiện XOR lần lượt với các key
+    binaryPassword = xorBinary(binaryPassword, key1);
+    binaryPassword = xorBinary(binaryPassword, key2);
+    binaryPassword = xorBinary(binaryPassword, key3);
+    binaryPassword = xorBinary(binaryPassword, key4);
+    binaryPassword = xorBinary(binaryPassword, key5);
+    binaryPassword = xorBinary(binaryPassword, key7);
+    binaryPassword = xorBinary(binaryPassword, key8);
+
+    // Chuyển kết quả XOR cuối cùng thành mã Hex
+    const hexPassword = binaryToHex(binaryPassword);
+
+    // Trả về mã Hex cuối cùng
+    return hexPassword;
+}
+
+// // Ví dụ sử dụng
+// const username = 'thanh';
+// const password = '1';
+// const code = 'usth_thanh';
+
+// const encryptedPassword = EncryptPassword(username, password, code);
+// console.log('Mật khẩu đã mã hóa:', encryptedPassword);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MM Add Account
+document.getElementById('add_account').addEventListener('click', function () {
+    let userName = document.getElementById('user_input').value;
+    let password = document.getElementById('pass_input').value;
+    let code = document.getElementById('code_input').value;
+
+    // Chuyển username, password, và code thành chuỗi
+    userName = userName.toString();
+    password = password.toString();
+    code = code.toString();
+
+    // Kiểm tra xem username, password, và code có chứa ký tự đặc biệt hay không
+    const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+    
+    // Kiểm tra dấu tiếng Việt trong mật khẩu (các ký tự Unicode có dấu)
+    const vietnameseAccentPattern = /[àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/;
+
+    // Kiểm tra khoảng cách trong username và password
+    const spacePattern = /\s/;
+
+    // Kiểm tra ký tự đặc biệt
+    if (specialCharPattern.test(userName) || specialCharPattern.test(password) || specialCharPattern.test(code)) {
+        alert('Username, password, và code không được chứa ký tự đặc biệt!');
+        return;
+    }
+    if (userName === "") {
+        alert('Username can not ');
+        return;
+    }
+    // Kiểm tra dấu tiếng Việt trong mật khẩu
+    if (vietnameseAccentPattern.test(userName) || vietnameseAccentPattern.test(password)) {
+        alert('Password không được chứa dấu tiếng Việt!');
+        return;
+    }
+
+    // Kiểm tra khoảng cách trong username và password
+    if (spacePattern.test(userName) || spacePattern.test(password)) {
+        alert('Username và password không được chứa khoảng cách!');
+        return;
+    }
+
+    // Kiểm tra xem username và password có trùng nhau không
+    if (userName === password) {
+        alert('Username và password không được trùng nhau!');
+        return;
+    }
+
+    // Kiểm tra xem username có tồn tại hay không
+    const userRef = ref(db, 'Account Index/Users/' + userName);
+    get(userRef)
+        .then((snapshot) => {
+            if (snapshot.exists()) {
+                alert('Username is exist: ' + userName);
+            } else {
+                // Nếu username chưa tồn tại, kiểm tra tiếp code
+                if (code.startsWith('usth_') && code.length > 5) {
+                    const codeKey = code;
+
+                    // Kiểm tra sự tồn tại của code
+                    const codeRef = ref(db, 'Account Index/Code/' + codeKey);
+                    get(codeRef)
+                        .then((snapshot) => {
+                            if (snapshot.exists()) {
+                                const existingUser = snapshot.val().userName;
+                                if (existingUser && existingUser !== userName) {
+                                    alert('Code already belongs to user: ' + existingUser);
+                                } else {
+                                    // Mã hóa mật khẩu bằng cách truyền userName, password và code vào hàm EncryptPassword
+                                    const encryptedPassword = EncryptPassword(userName, password, code);
+
+                                    // Thêm tài khoản mới vào Firebase
+                                    set(userRef, {
+                                        Code: codeKey,
+                                        Pass: encryptedPassword // Sử dụng mật khẩu đã mã hóa
+                                    })
+                                    .then(() => {
+                                        alert('Account added successfully: ' + userName);
+
+                                        // Xóa nội dung ô input sau khi thêm tài khoản thành công
+                                        document.getElementById('user_input').value = '';
+                                        document.getElementById('pass_input').value = '';
+                                        document.getElementById('code_input').value = '';
+                                    })
+                                    .catch((error) => {
+                                        console.error('Error adding account:', error);
+                                    });
+                                }
+                            } else {
+                                alert('Code does not exist: ' + codeKey);
+                            }
+                        })
+                        .catch((error) => {
+                            console.error('Error checking code existence:', error);
+                        });
+                } else {
+                    alert('Invalid code. Please enter a valid code that starts with "usth_"');
+                }
+            }
+        })
+        .catch((error) => {
+            console.error('Error checking username existence:', error);
+        });
+});
+
+// MM Add Code
+document.getElementById('add_code').addEventListener('click', function () {
+    const inputCode = document.getElementById('code_input_add').value;
+
+    // Kiểm tra xem code có bắt đầu bằng "usth_" và có ít nhất 4-5 ký tự
+    if (inputCode.startsWith('usth_') && inputCode.length > 5) {
+        const codeKey = inputCode;
+
+        // Truy cập Firebase để kiểm tra xem mã code đã tồn tại chưa
+        const codeRef = ref(db, 'Account Index/Code/' + codeKey);
+        get(codeRef)
+            .then((snapshot) => {
+                if (snapshot.exists()) {
+                    // Nếu mã code đã tồn tại
+                    alert('Code already exists: ' + codeKey);
+                } else {
+                    // Nếu mã code chưa tồn tại, thêm nó vào Firebase
+                    set(codeRef, "")
+                        .then(() => {
+                            alert('Code added successfully: ' + codeKey);
+
+                            // Sau khi thêm code thành công, cập nhật hiển thị chỉ với code vừa thêm
+                            const recentCodesList = document.getElementById('recent_codes_list');
+                            recentCodesList.innerHTML = ''; // Xóa các code cũ trong danh sách
+
+                            const li = document.createElement('li');
+                            li.textContent = codeKey; // Hiển thị tên code vừa được thêm
+                            recentCodesList.appendChild(li); // Thêm code vào danh sách "Gần đây"
+
+                            // Xóa nội dung ô input
+                            document.getElementById('code_input_add').value = '';
+                        })
+                        .catch((error) => {
+                            console.error('Error adding code:', error);
+                        });
+                }
+            })
+            .catch((error) => {
+                console.error('Error checking code existence:', error);
+            });
+    } else {
+        alert('Invalid code. Please enter a valid code that starts with "usth_"');
+    }
+});
+
+
+
+
+
+      
+    function showDiv_ADMIN(divNumber) {
+        // Ẩn tất cả các div
+        document.querySelectorAll('.bottom_content_admin').forEach(div => {
+            div.style.display = 'none';
+        });
+
+        // Hiển thị div tương ứng với số nút bấm
+        document.getElementById(`admin_dev${divNumber}`).style.display = 'block';
+      }
+
+      // Gán sự kiện onclick cho các nút bấm
+      document.querySelectorAll('.menu_left_admin li').forEach((item, index) => {
+          item.addEventListener('click', () => showDiv_ADMIN(index + 1));
+      });
+
+      document.querySelectorAll('.menu_left_admin li').forEach((item, index) => {
+        item.addEventListener('click', () => {
+            // Ẩn tất cả các div và reset màu
+            document.querySelectorAll('.bottom_content_admin').forEach(div => div.style.display = 'none');
+            document.querySelectorAll('.menu_left_admin li').forEach(li => {
+                li.style.backgroundColor = 'black';
+                li.style.border = '1px solid white';
+                li.querySelector('p').style.color = 'white';
+                li.querySelector('p').style.border = '1px solid white';
+            });
+
+            // Hiển thị div tương ứng và đổi màu
+            document.getElementById(`admin_dev${index + 1}`).style.display = 'block';
+            item.style.backgroundColor = 'white';
+            item.style.border = '1px solid black';
+            let paragraph = item.querySelector('p');
+            paragraph.style.color = 'black';
+            paragraph.style.border = '1px solid black';
+        });
+    });
+
+    showDiv_ADMIN(1);
+
+
+   
+    function checklogin(username, password, code) {
+    // Chuyển username, password và code thành string
+    username = username.toString().trim();
+    password = password.toString().trim();
+    code = code ? code.toString().trim() : '';  // Nếu không có code thì gán là chuỗi rỗng
+
+    // Kiểm tra xem username và password có chứa ký tự đặc biệt hay không
+    const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+    if (specialCharPattern.test(username) || specialCharPattern.test(password)) {
+        alert('Username và password không được chứa ký tự đặc biệt!');
+        return;
+    }
+    console.log('Username:', username);
+    console.log('Password:', password);
+    console.log('Code:', code);
+
+  
+    // Mã hóa mật khẩu mà người dùng đã nhập
+    const encryptedInputPassword = EncryptPassword(username, password, code);
+
+    
+
+    const dbRef = ref(db, 'Account Index');
+    get(dbRef).then((snapshot) => {
+        if (snapshot.exists()) {
+            const accounts = snapshot.val();
+            let isLoginSuccess = false;  // Thêm biến để theo dõi trạng thái đăng nhập
+
+            // Kiểm tra xem có code không
+            if (!code) {
+              console.log('Code:', code);
+              console.log('Encrypted Input Password:', encryptedInputPassword);
+              code = 1;
+                // Không có code => Đăng nhập admin
+                if (accounts['Admin']) {
+                    for (let adminName in accounts['Admin']) {
+                        const adminAccount = accounts['Admin'][adminName];
+
+                        // So sánh username và mật khẩu đã mã hóa
+                        if (adminName === username && adminAccount.Pass === encryptedInputPassword) {
+                            console.log('Login success with admin account:', adminName);
+
+                            // Hiển thị phần tử admin, ẩn các phần khác
+                            const part_admin = document.getElementById("part_admin");
+                            const part_user = document.getElementById("part1");
+                            const main = document.getElementById("main");
+                            const show_admin = document.getElementById("show_admin");
+
+                            part_user.style.display = 'none';
+                            part_admin.style.display = 'block';
+                            main.style.display = 'none';
+                            closeModal2(); // Đóng modal
+
+                            // Hiển thị tên quản trị viên đã đăng nhập
+                            show_admin.innerHTML = `<i class="fa-solid fa-user"></i> ${username} (ADMIN)`;
+
+                            isLoginSuccess = true;  // Đánh dấu là đăng nhập thành công
+                            break;  // Thoát khỏi vòng lặp khi đăng nhập thành công
+                        }
+                    }
+                }
+            } else {
+                // Có code => Đăng nhập người dùng
+                if (accounts['Users']) {
+                    for (let userUsername in accounts['Users']) {
+                        const userAccount = accounts['Users'][userUsername];
+
+                        // So sánh username và mật khẩu đã mã hóa
+                        if (userUsername === username && userAccount.Pass === encryptedInputPassword) {
+                            console.log('Login success with user account:', userUsername);
+
+                            // Hiển thị phần tử người dùng, ẩn các phần khác
+                            const part_admin = document.getElementById("part_admin");
+                            const part_user = document.getElementById("part1");
+                            const main = document.getElementById("main");
+                            const show_user = document.getElementById("show_user");
+
+                            part_user.style.display = 'block';
+                            part_admin.style.display = 'none';
+                            main.style.display = 'none';
+                            closeModal2(); // Đóng modal
+
+                            // Hiển thị tên người dùng đã đăng nhập
+                            show_user.innerHTML = `<i class="fa-solid fa-user"></i> ${username} (USER)`;
+
+                            isLoginSuccess = true;  // Đánh dấu là đăng nhập thành công
+                            break;  // Thoát khỏi vòng lặp khi đăng nhập thành công
+                        }
+                    }
+                }
+            }
+
+            // Nếu duyệt qua hết danh sách mà không đăng nhập thành công
+            if (!isLoginSuccess) {
+                alert('Login failed with account: ' + username);
+            }
+
+        } else {
+            console.log('Không có người dùng nào trong cơ sở dữ liệu');
+        }
+    }).catch((error) => {
+        console.error('Lỗi khi truy xuất dữ liệu:', error);
+    });
+
+    return false; // Ngăn form gửi dữ liệu nếu hàm được gọi từ một form
+}
+
+   
+
+// Xử lý khi người dùng nhấn nút Logout
+document.getElementById("logoutForm").addEventListener("submit", function (event) {
+  event.preventDefault();  // Ngăn không cho form submit mặc định
+
+    window.location.href = 'index.html'
+  // Đóng modal
+  closeModal2();
+});
+
+// Khi người dùng nhấn nút "Logout" để mở modal
+document.getElementById("button_logout_admin").addEventListener("click", function () {
+  openModal2();  // Mở modal logout
+});
+
+  // Làm hàm checkUser khả dụng bên ngoài module
+  window.checklogin = checklogin;
+
+
+  </script>
+</head>
+<body>
+ 
+
+
+
+  <div id="part_admin" class="main_content">
+    <div class="container-fluid">
+      <div class="row">
+
+        <!-- LEFT -->
+        <div class="col-2">
+          <div class="task_table">
+            <div class="logo_part">
+              <div class="image_company">
+                <img src="./assert/img/logo.png" alt="">
+              </div>
+              <div class="title">
+                <h3>Monitoring Sensor</h3>
+              </div>
+            </div>
+
+            <div class="menu_left_admin">
+              <ul>
+                <li><p>Main</p></li>
+                <li><p>Login Logs</p></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="col-10">
+          <div class="table_content_admin">
+            <div class="top_content">
+              <div class="row">
+                <div class="col-3">
+                  <p>HEAD</p>
+                </div>
+                <div class="col-9">
+                  <div class="button_log_out">
+                    <button id="button_logout_admin"><i class="fa-solid fa-right-from-bracket"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Nút 1 -->
+            <div id="admin_dev1" class="bottom_content_admin">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box col-12">
+                    
+                  </div>
+                  
+                  
+                  
+                </div>
+              </div>
+              <div class="line2">
+                <div class="row">
+                  <!-- Left -->
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Add & Delete Accounts</h3>
+                      <i class="fa-solid fa-gear"></i>
+                    </div>
+
+                    <div id="scroll_box" class="insite_box">
+
+
+                      <!-- USER -->
+                      <div class="user_part">
+                        <div class="row">
+                          <div class="add_account col-12">
+                            <h3>Add Account</h3>
+                            <div class="add_input">
+                              <p>User Name:  </p>
+                              <input type="text" id="user_input">
+                            </div>
+                            <div class="add_input">
+                              <p>Password:  </p>
+                              <input type="text" id="pass_input">
+                            </div>
+                            <div class="add_input">
+                              <p>Code:  </p>
+                              <input type="text" id="code_input">
+                            </div>
+                            <button id="add_account">Add Account</button>
+                          </div>
+                          
+  
+                        </div>
+                        
+                        <div class="row">
+                          <div class="del_title col-12">
+                            <h3>Delete Account</h3>
+                          </div>
+                          <div class="del_account col-12">
+                            
+                            <div class="search col-6">
+                              <div class="box_search">
+                                <h3>Search:</h3>
+                                <input type="text" id="search">
+                                
+                              </div>
+                              
+                              <p>Same Like Search: </p>
+                              <div class="lists_acc">
+                                <ul id="similar_accounts"></ul>
+                              </div>
+                               
+                            </div>
+                            <div class="show_acc col-6">
+                              <h3>Show Accounts</h3>
+                              <div class="lists_acc">
+                                <ul id="account_list"></ul>
+                              </div>
+                              
+                            
+                            </div>
+                            
+                          </div>
+                          <div class=" col-12">
+                            
+                            <button id="delete_account">Delete Account</button>
+                          </div>
+                        </div>
+                      </div>
+                      
+
+
+
+                    </div>
+                  </div>
+
+
+                  <!-- Right -->
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Add & Delete Code</h3>
+                      <i class="fa-solid fa-gear"></i>
+                    </div>
+
+                    <div class="insite_box">
+                      <div class="row">
+                        <div class="add_code col-12">
+                          <h3>Add Code</h3>
+                          <div class="add_input">
+                            <p>Code:  </p>
+                            <input type="text" id="code_input_add">
+                          </div>
+                          <div class="add_input">
+                            <p>Recent Codes:  </p>
+                            <ul id="recent_codes_list"></ul>
+                          </div>
+                          <button id="add_code">Add Code</button>
+                        </div>
+                      </div>
+                      
+                      <div class="row">
+                        <div class="del_title col-12">
+                          <h3>Delete Code</h3>
+                        </div>
+                        <div class="del_account col-12">
+                          
+                          <div class="search col-6">
+                            <div class="box_search">
+                              <h3>Search:</h3>
+                              <input type="text" id="search_code">
+                              
+                            </div>
+                            
+                            <p>Same Like Search: </p>
+                            <div class="lists_acc">
+                              <ul id="similar_codes"></ul>
+                            </div>
+                             
+                          </div>
+                          <div class="show_acc col-6">
+                            <h3>Show All Codes</h3>
+                            <div class="lists_acc">
+                              <ul id="code_list"></ul>
+                            </div>
+                            
+                          
+                          </div>
+                          
+                        </div>
+                        <div class=" col-12">
+                          
+                          <button id="delete_code">Delete Code</button>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+            </div>
+
+
+
+            <!-- Nút 3 -->
+            <div id="admin_dev2" class="bottom_content_admin">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box_web2_1 col-12">
+                    <div class="sensor_title">
+                      <h3>Table of all Sensor</h3>
+                      <button id="infor_Table">Sensor Information Table</button>
+                      <button id="alarm_Table">Fire Log Table</button>
+
+                      <i class="fa-solid fa-table"></i>
+                    </div>
+                    
+                  </div>
+                </div>
+    
+                <div class="row">
+                  <div class="col-12">
+
+                    <!-- Table 1: Temp & Humi & Smoke -->
+                    <div class="insite_box2" id="table1">
+                      <table id="myTable">
+                        <tr>
+                          <th rowspan="3">STT</th>
+                          <th rowspan="3">Date</th>
+                          <th rowspan="3" colspan="2">Name sensor</th>
+                          <th colspan="7">Information</th>
+                        </tr>
+                        
+                        <tr>
+                          <th colspan="2">Min - Time</th>
+                          <th colspan="2">Max - Time</th>
+                          <th>AVG</th>
+                          <th colspan="2">Max - Time</th>
+                        </tr>
+                        <tr>
+                          
+                          <th>Min</th>
+                          <th>Time</th>
+                          <th>Max</th>
+                          <th>Time</th>
+                          <th>Value</th>
+                          <th>True/False</th>
+                          <th>Time</th>
+                      
+                        </tr>
+
+                      </table>
+                    </div>
+
+                    <!-- Table 2: Fire Log -->
+                    <div class="insite_box2" id="table2" style="display: none;">
+                      <div class="setting_alarm">
+                        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <button></button>
+                      </div>
+                      <table id="alarmTable">
+                          <tr>
+                              <th>STT</th>
+                              <th>Sensors</th>
+                              <th>True/False</th>
+                              <th>Time</th>
+                              <th>Alarm</th>
+                          </tr>
+                          
+                      </table>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="log_out" class="modal">
+      <div class="modal-content">
+          <div class="modal-header">
+              
+              <p class="close-btn" onclick="closeModal2()">X</p>
+          </div>
+          
+          <form id="logoutForm">
+            <button type="submit" class="logout-btn">Log Out</button>
+          </form>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+ <script>
+  function openModal2() {
+      document.getElementById("log_out").style.display = "flex";
+      document.body.classList.add("modal-active");
+  }
+
+  function closeModal2() {
+      document.getElementById("log_out").style.display = "none";
+      document.body.classList.remove("modal-active");
+  }
+
+</script> 
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

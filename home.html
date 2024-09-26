@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Realtime Database</title>
+
+  <link rel="icon" href="./assert/img/logo.png" type="icon">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.3/dist/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://kit.fontawesome.com/9f25d43b0a.js" crossorigin="anonymous"></script>
+  
+  <title>Sensor Status</title>
+  <link rel="stylesheet" href="./assert/reset.css">
+  <link rel="stylesheet" href="./assert/style.css">
+  <link rel="stylesheet" href="./assert/style2.css">
+  
+
+  <script type="module">
+    let fireDetectedTime = null;
+    let fireDetected = false;
+    let chart1;
+    let chart2;
+    let chartInstanceTemp = null; 
+    let chartInstanceHumi = null;
+    let fireData;
+    let fireDuration = 0;
+    let fireInterval = null;
+    let chartTemp, chartHumi;
+    let data1, data2;
+    let chartData = null; 
+
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getDatabase, ref, set, remove, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+    // import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCTv0WFKuNafqszXmI40v_DIOVPkNqp-78",
+        authDomain: "monitoring-sensor-4e47e.firebaseapp.com",
+        databaseURL: "https://monitoring-sensor-4e47e-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "monitoring-sensor-4e47e",
+        storageBucket: "monitoring-sensor-4e47e.appspot.com",
+        messagingSenderId: "935434093765",
+        appId: "1:935434093765:web:35353ee82daebe23e6dcac",
+        measurementId: "G-B6MXC3TY4R"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const dbRef = ref(db); 
+
+  function saveSensorValues() {
+  fetch('r_read_values.php')
+  .then(response => response.json())
+  .then(data => {
+      // if (data.error) {
+      //     console.error('Error:', data.error);
+      //     return;
+      // }
+      // console.log(data);
+      const today = new Date();
+      const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+      const updates = {};
+
+      const sensors = {
+          'TemperatureC': data['b_sensor_TempC_values.txt'],
+          // 'TemperatureF': data['b_sensor_TempF_values.txt'],
+          'Humidity': data['c_sensor_Humi_values.txt']
+      };
+
+      get(ref(db, `/Monitoring/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`)).then((snapshot) => {
+        const todayData = snapshot.exists() ? snapshot.val() : {};
+
+        fetchYesterdayData(today, (yesterdayData) => {
+          Object.keys(sensors).forEach(sensorType => {
+          const values = sensors[sensorType];
+          const todayThresholds = todayData[sensorType] || {};
+          const yesterdayThresholds = yesterdayData[sensorType] || {};
+
+          let highThreshold, lowThreshold;
+
+          // Setting Threshold
+          if (sensorType === 'TemperatureC') {
+            highThreshold = todayThresholds['HIGH_THRESHOLD'] || yesterdayThresholds['HIGH_THRESHOLD'] || 60;
+            lowThreshold = todayThresholds['LOW_THRESHOLD'] || yesterdayThresholds['LOW_THRESHOLD'] || 0;
+          } else if (sensorType === 'Humidity') {
+            highThreshold = todayThresholds['HIGH_THRESHOLD'] || yesterdayThresholds['HIGH_THRESHOLD'] || 100;
+            lowThreshold = todayThresholds['LOW_THRESHOLD'] || yesterdayThresholds['LOW_THRESHOLD'] || 0;
+          } else {
+            highThreshold = todayThresholds['HIGH_THRESHOLD'] || yesterdayThresholds['HIGH_THRESHOLD'] || 100;
+            lowThreshold = todayThresholds['LOW_THRESHOLD'] || yesterdayThresholds['LOW_THRESHOLD'] || 0;
+          }
+          // else if (sensorType === 'TemperatureF') {
+          //   highThreshold = todayThresholds['HIGH_THRESHOLD'] || yesterdayThresholds['HIGH_THRESHOLD'] || 122;
+          //   lowThreshold = todayThresholds['LOW_THRESHOLD'] || yesterdayThresholds['LOW_THRESHOLD'] || 32;
+          // }
+          // console.log(values.time);
+          updates[sensorType] = {
+            'MIN': `${values.min || 'N/A'}`,
+            'MAX': `${values.max || 'N/A'}`,
+            'AVG': `${values.average || 'N/A'}`,
+            'MIN_TIME': `${values.min_time || 'N/A'}`,
+            'MAX_TIME': `${values.max_time || 'N/A'}`,
+            'HIGH_THRESHOLD': highThreshold,
+            'LOW_THRESHOLD': lowThreshold
+          };
+      });
+            // Dữ liệu của cảm biến lửa
+      const fireData = data['a_sensor_Fire_values.txt'];
+      updates['Fire'] = {
+        isFire: fireData?.isFire === '1',
+        duration: fireData?.duration || '00:00:00',
+        start_time: fireData?.start_time || 'N/A',
+        end_time: fireData?.end_time || 'N/A',
+        date_detected: fireData?.date_detected || 'N/A',
+        AVG: fireData?.avg_temp_during_fire|| 'N/A',
+        MIN: fireData?.temp_min_in_fire|| 'N/A',
+        MAX: fireData?.temp_max_in_fire|| 'N/A',
+        TIME_MIN: fireData?.time_min_in_fire|| '00:00:00',
+        TIME_MAX: fireData?.time_max_in_fire|| '00:00:00',
+      };
+
+      const validUpdates = {};
+      for (const [key, value] of Object.entries(updates)) {
+        const sanitizedKey = key.replace(/[/\[\].#$]/g, '_');
+        validUpdates[sanitizedKey] = value;
+      }
+
+      set(ref(db, `/Monitoring/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`), validUpdates)
+        .then(() => {
+          // console.log('Sensor values saved successfully after reset!');
+        })
+        .catch((error) => {
+          console.error('Error saving sensor values after reset: ', error);
+        });
+      });
+
+    }).catch((error) => {
+      console.error('Error fetching today\'s thresholds:', error);
+    });
+  })
+  .catch((error) => {
+      console.error('Error fetching sensor values:', error);
+  });
+}
+
+  function fetchYesterdayData(today, callback) {
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
+
+    get(ref(db, `/Monitoring/${yesterday.getFullYear()}/${yesterday.getMonth() + 1}/${yesterday.getDate()}`))
+    .then((snapshot) => {
+      const yesterdayData = snapshot.exists() ? snapshot.val() : {};
+      callback(yesterdayData);
+    })
+    .catch((error) => {
+      console.error('Error fetching yesterday\'s thresholds:', error);
+      callback({});
+    });
+  }
+
+
+
+  function updateFireLogAndFetch(data) {
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+    
+    const date = data['Monitoring'][year]?.[month]?.[day];
+    if (!date || !date['Fire']) {
+        console.error(`No fire data for ${year}-${month}-${day}`);
+        return;
+    }
+    
+    const is_fire = date['Fire']?.isFire || 'false';
+    const start_time = date['Fire']?.start_time || '00:00:00';
+    const end_time = date['Fire']?.end_time || '00:00:00';
+    const temp_AVG = date['Fire']?.AVG || 'N/A';
+    const temp_Max = date['Fire']?.MAX || 'N/A';
+    const temp_Min = date['Fire']?.MIN || 'N/A';
+    const temp_time_Max = date['Fire']?.TIME_MIN || 'N/A';
+    const temp_time_Min = date['Fire']?.TIME_MAX || 'N/A';
+    
+    const fireLogRef = ref(db, `/Monitoring/Fire_Log/${dateKey}/${start_time}`);
+    
+    if (is_fire !== 'false') {
+      get(fireLogRef).then((snapshot) => {
+        if (!snapshot.exists()) {
+          return set(fireLogRef, {
+            start_time: start_time,
+            end_time: end_time,
+            isFire: true,
+            AVG: temp_AVG,
+            MAX: temp_Max,
+            MIN: temp_Min,
+            TIME_MAX: temp_time_Max,
+            TIME_MIN: temp_time_Min
+          });
+        }else{
+          return set(fireLogRef, {
+            start_time: start_time,
+            end_time: end_time,
+            isFire: true,
+            AVG: temp_AVG,
+            MAX: temp_Max,
+            MIN: temp_Min,
+            TIME_MAX: temp_time_Max,
+            TIME_MIN: temp_time_Min
+          });
+        }
+      }).then(() => {
+        // console.log('Fire log saved successfully!');
+        // after update fire, reset file txt
+        fetchFireData(); 
+      }).catch((error) => {
+        console.error('Error:', error);
+      });
+    }
+  }
+
+  function fetchFireData() {
+    fetch('r_check_fire.php')
+    .then(response => response.json())
+    .then(data => {
+
+      const startTime = data.start_time;
+      const endTime = data.end_time;
+      const pythonOutput = data.python_output;
+
+      // console.log('Fire Event Detected:');
+      // console.log('Start Time:', startTime);
+      // console.log('End Time:', endTime);
+      // console.log('Python Script Output:', pythonOutput);
+        
+    })
+    .catch(error => {
+        console.error('Fetch Error:', error);
+    });
+  }
+
+
+
+  async function save31day(data) {
+    let totalDays = 0;
+    let allDates = [];
+    let monthMap = {};
+    let yearMap = {};
+
+    // Xác định ngày từ phần 'Monitoring'
+    if (data['Monitoring']) {
+      for (const yearKey in data['Monitoring']) {
+        if (data['Monitoring'].hasOwnProperty(yearKey) && yearKey !== 'Fire_Log') {
+          const yearData = data['Monitoring'][yearKey];
+          yearMap[yearKey] = {};
+
+          for (const monthKey in yearData) {
+            if (yearData.hasOwnProperty(monthKey)) {
+              const monthData = yearData[monthKey];
+              monthMap[`${yearKey}-${monthKey}`] = false;
+              yearMap[yearKey][monthKey] = false;
+
+              for (const dayKey in monthData) {
+                if (monthData.hasOwnProperty(dayKey)) {
+                  allDates.push(`${yearKey}-${String(monthKey).padStart(2, '0')}-${String(dayKey).padStart(2, '0')}`);
+                  monthMap[`${yearKey}-${monthKey}`] = true;
+                  yearMap[yearKey][monthKey] = true;
+                  totalDays++;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Xóa dữ liệu ngày cũ nếu tổng số ngày lớn hơn 9
+      if (allDates.length > 0) {
+        allDates.sort((a, b) => new Date(a) - new Date(b));
+
+        while (totalDays > 31 && allDates.length > 0) {
+          const smallestDate = allDates[0];
+          const [year, month, day] = smallestDate.split('-');
+          const pathToDelete = `/Monitoring/${year}/${parseInt(month)}/${parseInt(day)}`;
+          const dbRef = ref(db, pathToDelete);
+
+          try {
+            await remove(dbRef); // Sử dụng await để đợi xóa xong
+            console.log("Successfully deleting the oldest date:", smallestDate);
+            allDates.shift();
+            totalDays--;
+          } catch (error) {
+            console.error("Error:", error);
+          }
+        }
+
+        // Delete Month if that Month dont has any Date
+        for (const monthKey in monthMap) {
+          if (monthMap.hasOwnProperty(monthKey) && !monthMap[monthKey]) {
+            const [year, month] = monthKey.split('-');
+            const pathToDelete = `/Monitoring/${year}/${parseInt(month)}`;
+            const dbRef = ref(db, pathToDelete);
+
+            try {
+              await remove(dbRef);
+              console.log("Delete successful:", monthKey);
+            } catch (error) {
+              console.error("Error:", error);
+            }
+          }
+        }
+
+        // Delete Year if that Year dont has any Month
+        for (const yearKey in yearMap) {
+          if (yearMap.hasOwnProperty(yearKey)) {
+            const months = yearMap[yearKey];
+            const hasMonths = Object.keys(months).some(month => months[month]);
+
+            if (!hasMonths) {
+              const pathToDelete = `/Monitoring/${yearKey}`;
+              const dbRef = ref(db, pathToDelete);
+
+              try {
+                await remove(dbRef);
+                console.log("Delete successful:", yearKey);
+              } catch (error) {
+                console.error("Error:", error);
+              }
+            }
+          }
+        }
+      } 
+      // else {
+      //   console.log("Không có ngày nào trong dữ liệu.");
+      // }
+    } else {
+      console.error('Data không tồn tại!');
+    }
+  }
+
+
+  document.getElementById('push_thresholds').addEventListener('click', function() {
+    const tempCMax = document.getElementById('tempCMax')?.value;
+    const tempCMin = document.getElementById('tempCMin')?.value;
+
+    // const tempFMax = document.getElementById('tempFMax')?.value;
+    // const tempFMin = document.getElementById('tempFMin')?.value;
+
+    const humiMax = document.getElementById('humiMax')?.value;
+    const humiMin = document.getElementById('humiMin')?.value;
+
+    if (!tempCMax || !tempCMin || !humiMax || !humiMin) {
+      alert('Please fill in all 4 values before pushing the data.');
+      return;
+    }
+
+    console.log('Thresholds:', tempCMax, humiMax, tempCMin, humiMin);
+
+    const today = new Date();
+    let dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    dateKey = dateKey.replace(/[\.\#\$\[\]]/g, '_'); 
+    const thresholdsC = {
+      HIGH_THRESHOLD: tempCMax,
+      LOW_THRESHOLD: tempCMin
+    };
+    
+    // const thresholdsF = {
+    //   HIGH_THRESHOLD: tempFMax,
+    //   LOW_THRESHOLD: tempFMin
+    // };
+
+    const thresholdsH = {
+      HIGH_THRESHOLD: humiMax,
+      LOW_THRESHOLD: humiMin
+    };
+
+    // Đẩy dữ liệu lên Firebase
+    set(ref(db, `/Monitoring/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/TemperatureC`), thresholdsC)
+      .then(() => {
+        console.log('TemperatureC thresholds updated successfully!');
+        document.getElementById('tempCMax').value = "";
+        document.getElementById('tempCMin').value = "";
+        window.location.reload(); // Reload web-based
+      })
+      .catch(error => console.error('Error updating TemperatureC thresholds: ', error));
+
+    // set(ref(db, `/Monitoring/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/TemperatureF`), thresholdsF)
+    //   .then(() => {
+    //     console.log('TemperatureF thresholds updated successfully!');
+    //     document.getElementById('tempFMax').value = "";
+    //     document.getElementById('tempFMin').value = "";
+    //     window.location.reload(); // Reload web-based
+    //   })
+    //   .catch(error => console.error('Error updating TemperatureF thresholds: ', error));
+
+    set(ref(db, `/Monitoring/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/Humidity`), thresholdsH)
+      .then(() => {
+        console.log('Humidity thresholds updated successfully!');
+        document.getElementById('humiMax').value = "";
+        document.getElementById('humiMin').value = "";
+        window.location.reload(); // Reload web-based
+      })
+      .catch(error => console.error('Error updating Humidity thresholds: ', error));
+  });
+
+
+
+
+
+
+
+
+
+  function loadThresholds_placeholder() {
+    // console.log("Function loadThresholds_placeholder called"); 
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+
+    const dbRef = ref(db, `/Monitoring/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`);
+    get(dbRef).then((snapshot) => {
+      // console.log("Data from Firebase");
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        // console.log("data.TemperatureC.HIGH_THRESHOLD);
+
+        // Set placeholders with values from Firebase
+        document.getElementById('tempCMax').placeholder = data.TemperatureC?.HIGH_THRESHOLD;
+        document.getElementById('tempCMin').placeholder = data.TemperatureC?.LOW_THRESHOLD ;
+
+        // document.getElementById('tempFMax').placeholder = data.TemperatureF?.HIGH_THRESHOLD;
+        // document.getElementById('tempFMin').placeholder = data.TemperatureF?.LOW_THRESHOLD ;
+
+        document.getElementById('humiMax').placeholder = data.Humidity?.HIGH_THRESHOLD;
+        document.getElementById('humiMin').placeholder = data.Humidity?.LOW_THRESHOLD;
+      } else {
+        console.log("No data available for today.");  // Log when no data is found
+      }
+    }).catch((error) => {
+      console.error('Error fetching data:', error);  // Log errors
+    });
+  }
+
+
+
+
+
+  function updateBox(data) {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+
+    const statusBox = document.getElementById('statusBox1');
+    const text_noti_sensor_fire = document.getElementById('text_status1');
+    const date_detected = document.getElementById('date_detected');
+    const time_detected = document.getElementById('time_detected');
+    const fire_duration = document.getElementById('fire_duration');
+    
+    // Hàm chuyển đổi giây thành định dạng 00:00:00
+    function secondsToTime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // Check if the data has current date and Fire attribute
+    if ( data &&  data['Monitoring'][year] &&  data['Monitoring'][year][month] &&  data['Monitoring'][year][month][day] &&  data['Monitoring'][year][month][day].Fire) {
+        const fireData =  data['Monitoring'][year][month][day]['Fire'];
+        // console.log(fireData);
+        // Check Fire Status
+        if (fireData.isFire) {
+            if (!fireInterval) {
+              statusBox.style.backgroundColor = 'red';
+              text_noti_sensor_fire.textContent = 'Có lửa';
+              date_detected.textContent = `Date detected: ${fireData.date_detected}`;
+              time_detected.textContent = `Time detected: ${fireData.start_time}`;
+
+              // fireInterval = setInterval(() => {
+              //   fireDuration++;
+              //   // fire_duration.textContent = `Fire duration: ${secondsToTime(fireDuration)}`; // Hiển thị thời gian cháy
+              // }, 1000);
+            }
+        } else {
+          fireDuration = 0;
+
+          statusBox.style.backgroundColor = 'green';
+          text_noti_sensor_fire.textContent = 'Không có lửa';
+          date_detected.textContent = `Date detected: `;
+          time_detected.textContent = 'Time detected:';
+          // fire_duration.textContent = 'Fire duration: ';
+
+          // if (fireInterval) {
+          //   clearInterval(fireInterval);
+          //   fireInterval = null;
+          // }
+        }
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+  function updateChart(data) {
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+
+    if (typeof  data['Monitoring'] !== 'object' ||  data['Monitoring'] === null) {
+      console.error('Data error:',  data['Monitoring']);
+      return;
+    }
+
+    const labels = [];
+    const tempMinValues = [];
+    const tempMaxValues = [];
+    const tempAvgValues = [];
+
+    const humiMinValues = [];
+    const humiMaxValues = [];
+    const humiAvgValues = [];
+    // console.log(data['Monitoring']);
+
+    for (const year in  data['Monitoring']) {
+      if (data['Monitoring'].hasOwnProperty(year) && year !== 'Fire_Log') {
+        const yearData =  data['Monitoring'][year];
+
+        // Lặp qua các tháng trong năm
+        for (const month in yearData) {
+          if (yearData.hasOwnProperty(month)) {
+            const monthData = yearData[month];
+          
+            // Lặp qua các ngày trong tháng
+            for (const day in monthData) {
+              if (monthData.hasOwnProperty(day)) {
+                const dayData = monthData[day];
+
+                const dayData_Temp = dayData['TemperatureC']; 
+                const dayData_Humi = dayData['Humidity']; 
+
+                labels.push(`${year}-${month}-${day}`); 
+
+                if (dayData_Temp) {
+                  tempMinValues.push(dayData_Temp.MIN || 0); 
+                  tempMaxValues.push(dayData_Temp.MAX || 0); 
+                  tempAvgValues.push(dayData_Temp.AVG || 0); 
+                }
+
+                if (dayData_Humi) {
+                  humiMinValues.push(dayData_Humi.MIN || 0); 
+                  humiMaxValues.push(dayData_Humi.MAX || 0); 
+                  humiAvgValues.push(dayData_Humi.AVG || 0); 
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const ctx1 = document.getElementById('myChart3').getContext('2d');
+    const ctx2 = document.getElementById('myChart4').getContext('2d');
+
+    if (chartInstanceTemp) {
+      chartInstanceTemp.destroy();
+    }
+    if (chartInstanceHumi) {
+      chartInstanceHumi.destroy();
+    }
+
+    const tempData = {
+      labels: labels.reverse(),
+      datasets: [
+        {
+          label: 'Temp AVG',
+          data: tempAvgValues.reverse(),
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          borderColor: 'rgb(255, 99, 132)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Temp Max',
+          data: tempMaxValues.reverse(),
+          backgroundColor: 'rgba(255, 159, 64, 0.2)',
+          borderColor: 'rgb(255, 159, 64)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Temp MIN',
+          data: tempMinValues.reverse(),
+          backgroundColor: 'rgba(255, 205, 86, 0.2)',
+          borderColor: 'rgb(255, 205, 86)',
+          borderWidth: 1,
+        }
+      ]
+    };
+
+    const humiData = {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Humi AVG',
+          data: humiAvgValues.reverse(),
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgb(54, 162, 235)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Humi Max',
+          data: humiMaxValues.reverse(),
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgb(75, 192, 192)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Humi MIN',
+          data: humiMinValues.reverse(),
+          backgroundColor: 'rgba(153, 102, 255, 0.2)',
+          borderColor: 'rgb(153, 102, 255)',
+          borderWidth: 1,
+        }
+      ]
+    };
+
+    const config_Temp = {
+      type: 'bar',
+      data: tempData,
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: 'Data Temperature Sensor'
+          }
+        }
+      },
+    };
+
+    const config_Humi = {
+      type: 'bar',
+      data: humiData,
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: 'Data Humidity Sensor'
+          }
+        }
+      },
+    };
+    // console.log('Labels:', labels);
+    // console.log('Temp Min Values:', tempMinValues);
+    // console.log('Temp Max Values:', tempMaxValues);
+    // console.log('Temp Avg Values:', tempAvgValues);
+    // console.log('Humi Min Values:', humiMinValues);
+    // console.log('Humi Max Values:', humiMaxValues);
+    // console.log('Humi Avg Values:', humiAvgValues);
+
+    // Make Chart of Temp & Humi
+    chartInstanceTemp = new Chart(ctx1, config_Temp); 
+    chartInstanceHumi = new Chart(ctx2, config_Humi); 
+    }
+
+
+  
+  function updateChart_Temp_Humi() {
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const dbRef = ref(db, `/Monitoring/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`);
+
+    get(dbRef).then((snapshot) => {
+        const data = snapshot.val() || {};
+        // console.log(data);
+
+        // Make Labels
+        const labels = Array(13).fill('');
+
+        // Temperature Chart
+        data1 = {
+            labels: labels,
+            datasets: [{
+              label: 'Chart Temperature (°C)',
+              data: Array(labels.length).fill(0),
+              fill: false,
+              borderColor: 'rgb(255, 99, 132)',
+              tension: 0.1,
+              borderWidth: 2,
+              yAxisID: 'y-axis-1'
+            }, 
+            {
+              label: 'Chart Temperature (°F)',
+              data: Array(labels.length).fill(0),
+              fill: false,
+              borderColor: 'rgb(54, 162, 235)',
+              tension: 0.1,
+              borderWidth: 2,
+              yAxisID: 'y-axis-2'
+            }]
+        };
+
+        // Humidity Chart
+        data2 = {
+          labels: labels,
+          datasets: [{
+            label: 'Chart Humidity (%)',
+            data: Array(labels.length).fill(0),
+            fill: false,
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1,
+            yAxisID: 'y-axis-1'
+          }]
+        };
+
+        // Setting for Temp Chart
+        const config1 = {
+            type: 'line',
+            data: data1,
+            options: {
+                scales: {
+                  'y-axis-1': {
+                    type: 'linear',
+                    position: 'left',
+                    min: data['TemperatureC']?.LOW_THRESHOLD || 0,
+                    max: data['TemperatureC']?.HIGH_THRESHOLD || 50,
+                    ticks: {
+                      callback: function(value) {
+                        return value + '°C';
+                      },
+                    },
+                    scaleLabel: {
+                      display: true,
+                      labelString: 'Temperature (°C)'
+                    }
+                  },
+                  'y-axis-2': {
+                    type: 'linear',
+                    position: 'right',
+                    min: (data['TemperatureC']?.LOW_THRESHOLD * 9/5 + 32) || 32, // Chuyển đổi từ °C sang °F
+                    max: (data['TemperatureC']?.HIGH_THRESHOLD * 9/5 + 32) || 122, // Chuyển đổi từ °C sang °F
+                    ticks: {
+                      callback: function(value) {
+                        return value + '°F';
+                      },
+                    },
+                    scaleLabel: {
+                      display: true,
+                      labelString: 'Temperature (°F)'
+                    }
+                  }
+                },
+                plugins: {
+                    datalabels: {
+                        display: true,
+                        color: 'black',
+                        align: 'top',
+                        formatter: function(value) {
+                            return value;
+                        }
+                    }
+                }
+            }
+        };
+        
+        //  Setting for Humi Chart
+        const config2 = {
+            type: 'line',
+            data: data2,
+            options: {
+                scales: {
+                  'y-axis-1': {
+                    type: 'linear',
+                    position: 'left',
+                    min: data['Humidity']?.LOW_THRESHOLD || 0,
+                    max: data['Humidity']?.HIGH_THRESHOLD || 100,
+                    ticks: {
+                      callback: function(value) {
+                        return value + '%';
+                      }
+                    },
+                    scaleLabel: {
+                      display: true,
+                      labelString: 'Humidity (%)'
+                    }
+                  }
+                },
+                plugins: {
+                    datalabels: {
+                        display: true,
+                        color: 'black',
+                        align: 'top',
+                        formatter: function(value) {
+                            return value;
+                        }
+                    }
+                }
+            }
+        };
+
+        const ctx1 = document.getElementById('myChart1').getContext('2d');
+        const ctx2 = document.getElementById('myChart2').getContext('2d');
+
+        if (chartTemp) chartTemp.destroy();
+        chartTemp = new Chart(ctx1, config1);
+
+        if (chartHumi) chartHumi.destroy();
+        chartHumi = new Chart(ctx2, config2);
+
+    }).catch(error => {
+        console.error('Error fetching data:', error);
+    });
+  }
+
+
+
+function updateCharts() {
+  const now = new Date();
+  const formattedTime = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+
+  fetch('b_temp_humi_status.php')
+      .then(response => response.json())
+      .then(data => {
+          let tempCValue = parseFloat(data['b_sensor_TempC_values.txt']) || 0;
+          let tempFValue = parseFloat((tempCValue * 9 / 5) + 32) || 0;
+          let humidityValue = parseFloat(data['c_sensor_Humi_values.txt']) || 0;
+
+          const tempCLowThreshold = chartTemp.options.scales['y-axis-1'].min;
+          const tempCHighThreshold = chartTemp.options.scales['y-axis-1'].max;
+          if (tempCValue <= tempCLowThreshold) {
+            tempCValue = tempCLowThreshold;
+          }
+          if (tempCValue > tempCHighThreshold) {
+            tempCValue = tempCHighThreshold;
+          } 
+
+          const tempFLowThreshold = chartTemp.options.scales['y-axis-2'].min;
+          const tempFHighThreshold = chartTemp.options.scales['y-axis-2'].max;
+          if (tempFValue <= tempFLowThreshold) {
+            tempFValue = tempFLowThreshold;
+          }
+          if (tempFValue > tempFHighThreshold) {
+            tempFValue = tempFHighThreshold;
+          } 
+
+          const humidityLowThreshold = chartHumi.options.scales['y-axis-1'].min;
+          const humidityHighThreshold = chartHumi.options.scales['y-axis-1'].max;
+          if (humidityValue < humidityLowThreshold) {
+            humidityValue = humidityLowThreshold;
+          }
+          if (humidityValue > humidityHighThreshold){
+            humidityValue = humidityHighThreshold;
+          }
+
+          // Update Temperature C
+          if (data1) {
+              data1.datasets[0].data.shift();
+              data1.datasets[0].data.push(tempCValue);
+              data1.labels.shift();
+              data1.labels.push(formattedTime);
+          }
+
+          // Update Temperature F
+          if (data1) {
+              data1.datasets[1].data.shift();
+              data1.datasets[1].data.push(tempFValue);
+          }
+
+          chartTemp.update();
+
+          // Update Humidity
+          if (data2) {
+              data2.datasets[0].data.shift();
+              data2.datasets[0].data.push(humidityValue);
+              data2.labels.shift();
+              data2.labels.push(formattedTime);
+          }
+
+          chartHumi.update();
+
+      }).catch(error => console.error('Error:', error));
+}
+
+
+
+
+
+  function fetchDataFromFirebase() {
+    onValue(dbRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        chartData = data;
+        updateBox(data);
+        updateTable(data);  
+        updateTable2(data); 
+        updateFireLogAndFetch(data);
+        save31day(data);
+      } else {
+        console.error('Cant take Data from Database');
+      }
+    }, (error) => {
+      console.error('Error:', error);
+    });
+    }
+
+  window.onload = function() {
+    fetchDataFromFirebase();
+
+    setInterval(saveSensorValues, 4000);          // Update Database
+    setInterval(fetchDataFromFirebase, 5000);     // Update charts from Firebase every 1 second
+    updateChart_Temp_Humi();                      // Call updateChart_Temp_Humi
+    setInterval(updateBox, 1000);                 // Update Fire status every 1 second
+    setInterval(updateCharts, 1000);              // Update charts with sensor data every 1 second
+
+    //First time, update chart after 1 second
+    setTimeout(() => {
+      if (chartData) {
+        updateChart(chartData);  // Call updateChart
+      }
+
+      // After the first time call, update every 5sec
+      setInterval(() => {
+        if (chartData) {
+          updateChart(chartData);  // Call updateChart every 5sec
+        }
+      }, 10000);
+
+    }, 1000);
+
+      loadThresholds_placeholder();
+    };
+
+
+
+
+  function showDiv(divNumber) {
+
+      document.querySelectorAll('.bottom_content').forEach(div => {
+          div.style.display = 'none';
+      });
+
+      document.getElementById(`dev${divNumber}`).style.display = 'block';
+    }
+
+    document.querySelectorAll('.menu_left li').forEach((item, index) => {
+        item.addEventListener('click', () => showDiv(index + 1));
+    });
+
+    document.querySelectorAll('.menu_left li').forEach((item, index) => {
+      item.addEventListener('click', () => {
+          // // Reset background color and border for all items
+          // document.querySelectorAll('.menu_left li').forEach((li) => {
+          //     li.style.backgroundColor = 'black';
+          //     li.style.border = '1px solid white';
+          // });
+
+          // // Reset color and border for all paragraphs
+          // document.querySelectorAll('.menu_left li p').forEach((paragraph) => {
+          //     paragraph.style.color = 'white';
+          //     paragraph.style.border = '1px solid white';
+          // });
+
+          // item.style.backgroundColor = 'white';
+          // item.style.border = '1px solid black';
+
+          // let paragraph = item.querySelector('p');
+          // if (paragraph) {
+          //     paragraph.style.color = 'black';
+          //     paragraph.style.border = '1px solid black';
+          // }
+
+          showDiv(index + 1);
+      });
+  });
+
+
+    showDiv(1);
+
+  document.getElementById('infor_Table').addEventListener('click', () => {
+      document.getElementById('table1').style.display = 'block';
+      document.getElementById('table2').style.display = 'none';
+      
+  });
+
+  document.getElementById('alarm_Table').addEventListener('click', () => {
+      document.getElementById('table1').style.display = 'none';
+      document.getElementById('table2').style.display = 'block';
+  });
+
+  function updateTable(data) {
+    const years = Object.keys(data['Monitoring']).reverse();
+    const table1 = document.getElementById("myTable");
+    table1.innerHTML = `
+      <tr>
+        <th rowspan="3">No.</th>
+        <th rowspan="3">Date</th>
+        <th rowspan="3" colspan="2">Sensor Type</th>
+        <th colspan="5">Specification</th>
+      </tr>
+      <tr>
+        <th colspan="2">Min - Time</th>
+        <th colspan="2">Max - Time</th>
+        <th>AVG</th>
+      </tr>
+      <tr>
+        <th>Min</th>
+        <th>Time</th>
+        <th>Max</th>
+        <th>Time</th>
+        <th>Value</th>
+      </tr>
+    `;
+    let rowIndex = 1;
+    years.forEach(year => {
+      for (let month = 12; month >= 1; month--) {
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        for (let day = daysInMonth; day >= 1; day--) {
+          const dateKey = `${year}-${month}-${day}`;
+
+          if (data['Monitoring'][year] && data['Monitoring'][year][month] && data['Monitoring'][year][month][day]) {
+            const sensorData = data['Monitoring'][year][month][day];
+            const row = table1.insertRow();
+            row.innerHTML = `
+              <th rowspan="4">${rowIndex++}</th>
+              <th rowspan="4">${dateKey}</th>
+              <th rowspan="2">Temperature</th>
+              <td>(°C)</td>
+              <td>${sensorData.TemperatureC?.MIN || 'N/A'}</td>
+              <td>${sensorData.TemperatureC?.MIN_TIME || 'N/A'}</td>
+              <td>${sensorData.TemperatureC?.MAX || 'N/A'}</td>
+              <td>${sensorData.TemperatureC?.MAX_TIME || 'N/A'}</td>
+              <td>${sensorData.TemperatureC?.AVG ? parseFloat(sensorData.TemperatureC.AVG).toFixed(2) : 'N/A'}</td>
+            `;
+
+            const row2 = table1.insertRow();
+            row2.innerHTML = `
+              <td>(°F)</td>
+              <td>${(sensorData.TemperatureC?.MIN * 9/5 + 32) || 'N/A'}</td>
+              <td>${sensorData.TemperatureC?.MIN_TIME || 'N/A'}</td>
+              <td>${(sensorData.TemperatureC?.MAX * 9/5 + 32) || 'N/A'}</td>
+              <td>${sensorData.TemperatureC?.MAX_TIME || 'N/A'}</td>
+              <td>${(sensorData.TemperatureC?.AVG * 9/5 + 32) ? parseFloat(sensorData.TemperatureC.AVG * 9/5 + 32).toFixed(2) : 'N/A'}</td>
+            `;
+            const row3 = table1.insertRow();
+            row3.innerHTML = `
+              <td colspan="2">Humidity (%)</td>
+              <td>${sensorData.Humidity?.MIN || 'N/A'}</td>
+              <td>${sensorData.Humidity?.MIN_TIME || 'N/A'}</td>
+              <td>${sensorData.Humidity?.MAX || 'N/A'}</td>
+              <td>${sensorData.Humidity?.MAX_TIME || 'N/A'}</td>
+              <td>${sensorData.Humidity?.AVG ? parseFloat(sensorData.Humidity.AVG).toFixed(2) : 'N/A'}</td>
+            `;
+
+            const row4 = table1.insertRow();
+            row4.innerHTML = `
+              <td colspan="2">Smoke (%)</td>
+              <td>${sensorData.Smoke?.MIN || 'N/A'}</td>
+              <td>${sensorData.Smoke?.MIN_TIME || 'N/A'}</td>
+              <td>${sensorData.Smoke?.MAX || 'N/A'}</td>
+              <td>${sensorData.Smoke?.MAX_TIME || 'N/A'}</td>
+              <td>${sensorData.Smoke?.AVG ? parseFloat(sensorData.Smoke.AVG).toFixed(2) : 'N/A'}</td>
+            `;
+          }
+        }
+      }
+    });
+  }
+
+
+    // Fire Log Table
+  function updateTable2(data) {
+    const table2 = document.getElementById("alarmTable");
+    table2.innerHTML = `
+      <tr>
+        <th>No.</th>
+        <th>Date</th>
+        <th>Sensor</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Duration</th>
+        <th>Temp Average (°C)</th>
+        <th>Temp Min (°C)</th>
+        <th>Time Min</th>
+        <th>Temp Max (°C)</th>
+        <th>Time Max</th>
+      </tr>
+    `;
+
+    let rowIndex = 1;
+
+    function timeToSeconds(time) {
+      const [hours, minutes, seconds] = time.split(':').map(Number);
+      return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    function secondsToTime(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    const fireLogs = data['Monitoring']['Fire_Log'];
+    if (fireLogs) {
+      Object.entries(fireLogs).reverse().forEach(([date, timeData]) => {
+        Object.entries(timeData).reverse().forEach(([time, logData]) => {
+          const row = table2.insertRow();
+
+          const start_time_Second = timeToSeconds(logData.start_time || '00:00:00');
+          const end_time_Second = timeToSeconds(logData.end_time || '00:00:00');
+          const duration = secondsToTime(end_time_Second - start_time_Second);
+
+          row.innerHTML = `
+            <th>${rowIndex++}</th>
+            <th>${date || 'N/A'}</th>
+            <th>Fire</th>
+            <td>${logData.start_time || '00:00:00'}</td>
+            <td>${logData.end_time || '00:00:00'}</td>
+            <td>${duration || '00:00:00'}</td>
+            <td>${parseFloat(logData.AVG).toFixed(2) || 'N/A'}</td>
+            <td>${logData.MIN || 'N/A'}</td>
+            <td>${logData.MIN_TIME || 'N/A'}</td>
+            <td>${logData.MAX || 'N/A'}</td>
+            <td>${logData.MAX_TIME || 'N/A'}</td>
+          `;
+        });
+      });
+    } else {
+      console.log('No Fire Logs');
+    }
+  }
+
+
+
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('add_data').addEventListener('click', function() {
+        let dateInput = document.getElementById('date_input').value;
+        // Chuyển đổi dateInput thành đối tượng Date
+        const inputDate = new Date(dateInput); // Đảm bảo format đúng (yyyy-mm-dd)
+
+        // Nhiệt độ
+        let tempMinInput = document.getElementById('temp_min_time').value.split("-");
+        let tempMin = parseFloat(tempMinInput[0]);
+        let tempMinTime = tempMinInput[1];
+        
+        let tempMaxInput = document.getElementById('temp_max_time').value.split("-");
+        let tempMax = parseFloat(tempMaxInput[0]);
+        let tempMaxTime = tempMaxInput[1];
+
+        let tempHigh_Threshold = document.getElementById('temp_Hthreshold_input').value;
+        let tempLow_Threshold = document.getElementById('temp_Lthreshold_input').value;
+        let tempAvg = parseFloat((tempMin + tempMax)/2);
+
+        // Chuyển đổi độ C sang độ F
+        let tempMinF = (tempMin * 9/5) + 32;
+        let tempMaxF = (tempMax * 9/5) + 32;
+        let tempAvgF = (tempAvg * 9/5) + 32;
+        let tempHIGH_THRESHOLDF = (tempHigh_Threshold * 9/5) + 32;
+        let tempLOW_THRESHOLDF = (tempLow_Threshold * 9/5) + 32;
+
+        // Độ ẩm
+        let humiMinInput = document.getElementById('humi_min_time').value.split("-");
+        let humiMin = parseFloat(humiMinInput[0]);
+        let humiMinTime = humiMinInput[1];
+
+        let humiMaxInput = document.getElementById('humi_max_time').value.split("-");
+        let humiMax = parseFloat(humiMaxInput[0]);
+        let humiMaxTime = humiMaxInput[1];
+
+        let humiHigh_Threshold = document.getElementById('humi_Hthreshold_input').value;
+        let humiLow_Threshold = document.getElementById('humi_Lthreshold_input').value;
+        let humiAvg = parseFloat((humiMin + humiMax)/2);
+
+        // Tạo đối tượng dữ liệu tổng hợp
+        let monitoringData = {
+            Fire:{
+              isFire: 'false',
+              duration: '00:00:00',
+              start_time: '00:00:00',
+              end_time: '00:00:00',
+              date_detected:'N/A',
+              AVG: 'N/A',
+              MIN: 'N/A',
+              MAX: 'N/A',
+              TIME_MIN: '00:00:00',
+              TIME_MAX: '00:00:00',
+            },
+            TemperatureC: {
+                MIN: tempMin,
+                MAX: tempMax,
+                AVG: tempAvg,
+                TIME_MIN: tempMinTime,
+                TIME_MAX: tempMaxTime,
+                HIGH_THRESHOLD: tempHigh_Threshold,
+                LOW_THRESHOLD: tempLow_Threshold
+            },
+            // TemperatureF: {
+            //     MIN: tempMinF.toFixed(2),
+            //     MAX: tempMaxF.toFixed(2),
+            //     AVG: tempAvgF.toFixed(2),
+            //     TIME_MIN: tempMinTime,
+            //     TIME_MAX: tempMaxTime,
+            //     HIGH_THRESHOLD: tempHIGH_THRESHOLDF,
+            //     LOW_THRESHOLD: tempLOW_THRESHOLDF
+            // },
+            Humidity: {
+                MIN: humiMin,
+                TIME_MIN: humiMinTime,
+                MAX: humiMax,
+                TIME_MAX: humiMaxTime,
+                AVG: humiAvg,
+                HIGH_THRESHOLD: humiHigh_Threshold,
+                LOW_THRESHOLD: humiLow_Threshold
+            }
+        };
+
+        // Đẩy dữ liệu lên Firebase
+        set(ref(db, `/Monitoring/${inputDate.getFullYear()}/${inputDate.getMonth() + 1}/${inputDate.getDate()}`), monitoringData)
+            .then(() => {
+                console.log('Data updated successfully.');
+            })
+            .catch(error => console.error('Error updating data: ', error));
+    });
+});
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('add_fire_log').addEventListener('click', function() {
+        let dateInput = document.getElementById('dateFire_input').value;
+        // Chuyển đổi dateInput thành đối tượng Date
+        const inputDate = new Date(dateInput); // Đảm bảo format đúng (yyyy-mm-dd)
+
+        // Nhiệt độ
+        let fire_min_time = document.getElementById('fire_min_time').value.split("-");
+        let min = parseFloat(fire_min_time[0]);
+        let time_min = fire_min_time[1];
+
+        let fire_max_time = document.getElementById('fire_max_time').value.split("-");
+        let max = parseFloat(fire_max_time[0]);
+        let time_max = fire_max_time[1];
+
+        let start_Time = document.getElementById('start_time').value;
+        let end_Time = document.getElementById('end_time').value;
+        let tempAvg = parseFloat((min + max)/2);
+
+        // Tạo đối tượng dữ liệu tổng hợp
+        let firelogData = {
+          isFire: 'true',
+          start_time: start_Time,
+          end_time: end_Time,
+          AVG: tempAvg.toFixed(2),
+          MIN: min.toFixed(2),
+          MAX: max.toFixed(2),
+          TIME_MIN: time_min,
+          TIME_MAX: time_max,
+        };
+
+        // Đẩy dữ liệu lên Firebase
+        set(ref(db, `/Monitoring/Fire_Log/${inputDate.getFullYear()}-${inputDate.getMonth() + 1}-${inputDate.getDate()}/${start_Time}`), firelogData)
+            .then(() => {
+                console.log('Data updated successfully.');
+            })
+            .catch(error => console.error('Error updating data: ', error));
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+  // Delete Data
+  const accountList = document.getElementById('account_list');
+  const searchInput = document.getElementById('search');
+  const similarAccountsList = document.getElementById('similar_accounts');
+  let dateID = null; // save the ID when choosing
+
+  // Click to list Date
+  function clickevent_of_List_Items(list) {
+    list.querySelectorAll('li').forEach(item => {
+      item.addEventListener('click', function() {
+        // Delete the active part 
+        document.querySelectorAll('#account_list li, #similar_accounts li').forEach(li => li.classList.remove('active'));
+
+        // Choose the date has been choosing
+        this.classList.add('active');
+        dateID = this.textContent; // Save ID of the Date
+      });
+    });
+  }
+
+
+  onValue(dbRef, (snapshot) => {
+    const dateSnapshot = snapshot.child('Monitoring');
+    const dates = [];
+
+    dateSnapshot.forEach((yearSnapshot) => {
+      const year = yearSnapshot.key; 
+
+      yearSnapshot.forEach((monthSnapshot) => {
+        const month = monthSnapshot.key; 
+
+        monthSnapshot.forEach((daySnapshot) => {
+          const day = daySnapshot.key;
+
+          const fullDate = `${day}/${month}/${year}`;
+          dates.push(fullDate);
+        });
+      });
+    });
+
+    dates.sort((a, b) => {
+      const [dayA, monthA, yearA] = a.split('/').map(Number);
+      const [dayB, monthB, yearB] = b.split('/').map(Number);
+      return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+    });
+
+    // Create tags and add to list based on array sorting
+    accountList.innerHTML = '';
+    dates.forEach((date) => {
+      const li = document.createElement('li');
+      li.id = `id_${date.replace(/\//g, '_')}`; // Replace / with _ to avoid conflicts in IDs
+
+      li.textContent = date;
+      
+      accountList.appendChild(li);
+    });
+    
+    clickevent_of_List_Items(accountList); // Add a click event to the account_list list
+    
+    // Search and display similar dates
+    searchInput.addEventListener('input', function() {
+      const searchValue = searchInput.value.toLowerCase(); // change to lowercase text
+      similarAccountsList.innerHTML = ''; // delete the result before to prepare show the list new results
+      
+      const similarDates = dates.filter(date => {
+        return date.toLowerCase().startsWith(searchValue); // Find the result 
+      });
+      
+      // Shows similar dates
+      similarDates.forEach(date => {
+        const li = document.createElement('li');
+        li.textContent = date;
+        similarAccountsList.appendChild(li);
+      });
+      
+      clickevent_of_List_Items(similarAccountsList); // Add a click event to the similar_accounts list
+    });
+  });
+
+  // Handle the event when clicks to the "Delete Data" button
+  document.getElementById('delete_data').addEventListener('click', () => {
+    if (dateID) {
+      const [day, month, year] = dateID.split('/'); //
+      const dateRef = ref(db, `Monitoring/${year}/${month}/${day}`);
+      remove(dateRef)
+      .then(() => {
+        // alert(`Date Deleted: ${dateID}`);
+
+        accountList.innerHTML = '';
+        similarAccountsList.innerHTML = '';
+        onValue(dbRef, (snapshot) => {
+          const dateSnapshot = snapshot.child('Monitoring');
+          const dates = [];
+          dateSnapshot.forEach((yearSnapshot) => {
+            const year = yearSnapshot.key;
+            yearSnapshot.forEach((monthSnapshot) => {
+              const month = monthSnapshot.key;
+              monthSnapshot.forEach((daySnapshot) => {
+              const day = daySnapshot.key;
+              const fullDate = `${day}/${month}/${year}`;
+              dates.push(fullDate);
+              });
+            });
+          });
+          
+          // Cập nhật danh sách account_list
+          dates.forEach((date) => {
+            const li = document.createElement('li');
+            li.id = `id_${date.replace(/\//g, '_')}`;
+            li.textContent = date;
+            accountList.appendChild(li);
+          });
+          clickevent_of_List_Items(accountList);
+
+          dates.forEach((date) => {
+            const li = document.createElement('li');
+            li.textContent = date;
+            similarAccountsList.appendChild(li);
+          });
+          clickevent_of_List_Items(similarAccountsList); 
+        });
+      })
+      .catch((error) => {
+        console.error("Error when delete", error);
+      });
+    }
+  });
+
+
+
+
+// Xử lý khi người dùng nhấn nút Logout
+document.getElementById("logoutForm").addEventListener("submit", function (event) {
+  event.preventDefault();  // Ngăn không cho form submit mặc định
+  
+  // Ẩn các phần của user/admin và hiển thị giao diện chính
+  const partAdmin = document.getElementById("part_admin");
+  const partUser = document.getElementById("part1");
+  const main = document.getElementById("main");
+  const showUser = document.getElementById("show_user");
+
+  // Ẩn phần user và admin, hiện phần chính
+  partUser.style.display = 'none';
+  partAdmin.style.display = 'none';
+  main.style.display = 'block';
+  
+  // Xóa thông tin đăng nhập
+  sessionStorage.removeItem("isLoggedIn");
+  showUser.innerHTML = "";  // Xóa thông tin người dùng đang hiển thị
+
+  // Đóng modal
+  closeModal2();
+});
+
+// Khi người dùng nhấn nút "Logout" để mở modal
+document.getElementById("button_logout_user").addEventListener("click", function () {
+  openModal2();  // Mở modal logout
+});
+
+
+
+  </script>
+</head>
+<body>
+  <!-- Main Monitoring Project  -->
+  <div id="part1" class="main_content">
+    <div class="container-fluid">
+      <div class="row">
+
+        <!-- LEFT -->
+        <div class="col-2">
+          <div class="task_table">
+            <div class="logo_part">
+              <div class="image_company">
+                <img src="./assert/img/logo.png" alt="">
+              </div>
+              <div class="title">
+                <h3>Monitoring System</h3>
+              </div>
+            </div>
+
+            <div class="menu_left">
+              <ul>
+                <li><p>Main</p></li>
+                <li><p>Chart Line</p></li>
+                <li><p>Excel</p></li>
+                <li><p>Settings Data</p></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="col-10">
+          <div class="table_content">
+            <div class="top_content">
+              <div class="row">
+                <div class="col-3">
+                  <!-- <p>HEAD</p> -->
+                </div>
+                <div class="col-9">
+                  <div class="button_log_out">
+                    <!-- <p id="show_user"><i class="fa-solid fa-user"></i></p> -->
+                    <button id="button_logout_user"><i class="fa-solid fa-right-from-bracket"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Nút 1 -->
+            <div id="dev1" class="bottom_content">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box col-4">
+                    <div class="sensor_title">
+                      
+                      <h3>Sensor of Flame</h3>
+                      <!-- <p id="status_Fire">off</p> -->
+                      <!-- <button id="reset_fire">Reset</button> -->
+                      <i class="fa-solid fa-fire"></i>
+                  
+                   
+                      
+                    </div>
+                    <div class="insite_box a">
+                      <div class="status" id="statusBox1">
+                        <p id="text_status1">Không có lửa</p>
+                      </div>
+                      <div class="show_time">
+                        <p id="date_detected"></p>
+                        <p id="time_detected"></p>
+                        <p id="fire_duration"></p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="sensor_box col-3">
+                    <div class="sensor_title">
+                      <h3>Sensor of Smoke</h3>
+                      <i class="fa-solid fa-smog"></i>
+                    </div>
+                    <div class="insite_box">
+                      <div class="status" id="statusBox3">
+                        <p id="text_status3">Không có lửa</p>
+                      </div>
+                    </div>
+                  </div>
+    
+                  <div class="sensor_box col-5">
+                    <div class="sensor_title">
+                      <h3>Setting sensors thresholds</h3>
+                      <button id="push_thresholds"><p>Push</p></button>
+                      <i class="fa-solid fa-gear"></i>
+                    </div>
+                    
+                    <div class="insite_box">
+                      <div class="row">
+                        <div class="col-6">
+                          <div class="threshold_input">
+                            <p>TempC Max:  </p>
+                            <input type="number" id="tempCMax" min="0" max="60" placeholder="60">
+                          </div>
+                          <!-- <div class="threshold_input">
+                            <p>TempF Max:  </p>
+                            <input type="number" id="tempFMax" min="32" max="122" placeholder="100">
+                          </div> -->
+                          <div class="threshold_input">
+                            <p>Humi Max:   </p>
+                            <input type="number" id="humiMax" min="0" max="60" placeholder="100">
+                          </div>
+                        </div>
+
+                        <div class="col-6">
+                          <div class="threshold_input">
+                            <p>TempF Min:</p>
+                            <input type="number" id="tempCMin" min="0" max="60" placeholder="0">
+                          </div>
+                          <!-- <div class="threshold_input">
+                            <p>TempF Min:</p>
+                            <input type="number" id="tempFMin" min="32" max="122" placeholder="0">
+                          </div> -->
+                          <div class="threshold_input">
+                            <p>Humi Min:</p>
+                            <input type="number" id="humiMin" min="0" max="60" placeholder="0">
+                          </div>
+                        </div>
+                      </div>
+                      
+                      
+                    </div>
+                    
+                  </div>
+      
+                  
+                </div>
+              </div>
+              <div class="line2">
+                <div class="row">
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Temperature Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box">
+                      <div class="status" id="statusBox_temp">
+                        <canvas id="myChart1"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Humidity Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box">
+                      <div class="status" id="statusBox_temp">
+                        <canvas id="myChart2"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+
+            <!-- Nút 2 -->
+            <div id="dev2" class="bottom_content">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box_web2_1 col-12">
+                    <div class="sensor_title">
+                      <h3>Temperature Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box2">
+                      <div class="status" id="statusBox_temp_web2">
+                        <canvas id="myChart3" ></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+    
+                <div class="row">
+                  <div class="sensor_box_web2_2 col-12">
+                    <div class="sensor_title">
+                      <h3>Humidity Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box2">
+                      <div class="status" id="statusBox_humi_web2">
+                        <canvas id="myChart4"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Nút 3 -->
+            <div id="dev3" class="bottom_content">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box_web2_1 col-12">
+                    <div class="sensor_title">
+                      <h3>Table of all Sensor</h3>
+                      <button id="infor_Table">Sensor Information Table</button>
+                      <button id="alarm_Table">Fire Log Table</button>
+
+                      <i class="fa-solid fa-table"></i>
+                    </div>
+                    
+                  </div>
+                </div>
+    
+                <div class="row">
+                  <div class="col-12">
+
+                    <!-- Table 1: Temp & Humi & Smoke -->
+                    <div class="insite_box2" id="table1">
+                      <table id="myTable">
+                        <tr>
+                          <th rowspan="3">STT</th>
+                          <th rowspan="3">Date</th>
+                          <th rowspan="3" colspan="2">Name sensor</th>
+                          <th colspan="7">Information</th>
+                        </tr>
+                        
+                        <tr>
+                          <th colspan="2">Min - Time</th>
+                          <th colspan="2">Max - Time</th>
+                          <th>AVG</th>
+                          <th colspan="2">Max - Time</th>
+                        </tr>
+                        <tr>
+                          
+                          <th>Min</th>
+                          <th>Time</th>
+                          <th>Max</th>
+                          <th>Time</th>
+                          <th>Value</th>
+                          <th>True/False</th>
+                          <th>Time</th>
+                      
+                        </tr>
+
+                      </table>
+                    </div>
+
+                    <!-- Table 2: Fire Log -->
+                    <div class="insite_box2" id="table2" style="display: none;">
+                      <div class="setting_alarm">
+                        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <button></button>
+                      </div>
+                      <table id="alarmTable">
+                          <tr>
+                              <th>STT</th>
+                              <th>Sensors</th>
+                              <th>True/False</th>
+                              <th>Time</th>
+                              <th>Alarm</th>
+                          </tr>
+                          
+                      </table>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <div id="dev4" class="bottom_content">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box col-12">   
+                  </div>
+                </div>
+              </div>
+              <div class="line2">
+                <div class="row">
+                  <!-- Left -->
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Add & Delete Data Date</h3>
+                      <i class="fa-solid fa-gear"></i>
+                    </div>
+
+                    <div id="scroll_box" class="insite_box">
+
+                      <div class="add_data_part">
+                        <div class="row">
+                          <div class="add_account col-12">
+                            <h3>Add Data Date</h3>
+
+                            <div class="add_input">
+                              <p>Date:  </p>
+                              <input type="date" id="date_input">
+                            </div>
+                            <div class="add_input temp">
+                              <p>Temperature (°C):  </p>
+                            </div>
+                            <div class="add_input">
+                              <p>Min - Time:  </p>
+                              <input type="text" id="temp_min_time" placeholder="Ex: xx-00/00/00">
+                            </div>
+                            <div class="add_input">
+                              <p>Max - Time:  </p>
+                              <input type="text" id="temp_max_time"placeholder="Ex: xx-00/00/00">
+                            </div>
+                            <div class="add_input">
+                              <p>AVG (Avg of Min and Max)</p>
+                            </div>
+                            <div class="add_input">
+                              <p>High Threshold:  </p>
+                              <input type="text" id="temp_Hthreshold_input" placeholder="Ex: 60">
+                            </div> 
+                            <div class="add_input">
+                              <p>Low Threshold:  </p>
+                              <input type="text" id="temp_Lthreshold_input" placeholder="Ex: 0">
+                            </div>
+                           <!--  -->
+                            <div class="add_input humi">
+                              <p>Humidity (%):  </p>
+                            </div>
+                            <div class="add_input">
+                              <p>Min - Time:  </p> 
+                              <input type="text" id="humi_min_time" placeholder="Ex: xx-00/00/00">
+                            </div>
+                            <div class="add_input">
+                              <p>Max - Time:  </p>
+                              <input type="text" id="humi_max_time" placeholder="Ex: xx-00/00/00">
+                            </div>
+                            <div class="add_input">
+                              <p>AVG (Avg of Min and Max)</p>
+                            </div>
+                            <div class="add_input">
+                              <p>High Threshold:  </p>
+                              <input type="text" id="humi_Hthreshold_input" placeholder="Ex: 100">
+                            </div> 
+                            <div class="add_input">
+                              <p>Low Threshold:  </p>
+                              <input type="text" id="humi_Lthreshold_input" placeholder="Ex: 0">
+                            </div>
+
+
+                            <button id="add_data">Add Data</button>
+                          </div>
+                          
+  
+                        </div>
+                        
+                        <div class="row">
+                          <div class="del_title col-12">
+                            <h3>Delete Data</h3>
+                          </div>
+                          <div class="del_account col-12">
+                            
+                            <div class="search col-6">
+                              <div class="box_search">
+                                <h3>Search:</h3>
+                                <input type="text" id="search">
+                                
+                              </div>
+                              
+                              <p>Same Like Search: </p>
+                              <div class="lists_acc">
+                                <ul id="similar_accounts"></ul>
+                              </div>
+                               
+                            </div>
+                            <div class="show_acc col-6">
+                              <h3>Show Date & Fire Logs</h3>
+                              <div class="lists_acc">
+                                <ul id="account_list"></ul>
+                              </div>
+                              
+                            
+                            </div>
+                            
+                          </div>
+                          <div class=" col-12">
+                            
+                            <button id="delete_data">Delete Account</button>
+                          </div>
+                        </div>
+                      </div>
+                      
+
+                    </div>
+                  </div>
+
+
+                  <!-- Right -->
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Add Fire Log</h3>
+                      <i class="fa-solid fa-gear"></i>
+                    </div>
+
+                    <div id="scroll_box" class="insite_box">
+
+                      <div class="add_data_part">
+                        <div class="row">
+                          <div class="add_account2 col-12">
+                            <h3>Add Data Date</h3>
+
+                            <div class="add_input">
+                              <p>Date:  </p>
+                              <input type="date" id="dateFire_input">
+                            </div>
+                            <div class="add_input temp">
+                              <p>Fire Log:  </p>
+                            </div>
+                            <div class="add_input">
+                              <p>Start Time:  </p>
+                              <input type="text" id="start_time" placeholder="00:00:00">
+                            </div>
+                            <div class="add_input">
+                              <p>End Time:  </p>
+                              <input type="text" id="end_time" placeholder="00:00:00">
+                            </div>
+                            
+                            <div class="add_input">
+                              <p>Min - Time:  </p>
+                              <input type="text" id="fire_min_time" placeholder="xx-00/00/00">
+                            </div> 
+                            <div class="add_input">
+                              <p>Max - Time:  </p>
+                              <input type="text" id="fire_max_time" placeholder="xx-00/00/00">
+                            </div>
+                            <div class="add_input">
+                              <p>AVG (Avg of Min and Max)</p>
+                            </div>
+                           
+                            <button id="add_fire_log">Add Data</button>
+                          </div>
+                          
+  
+                        </div>
+                        
+
+                      </div>
+                      
+
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="log_out" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            
+            <p class="close-btn" onclick="closeModal2()">X</p>
+        </div>
+        
+        <form id="logoutForm">
+          <button type="submit" class="logout-btn">Log Out</button>
+        </form>
+    </div>
+  </div>
+
+
+ <script>
+
+
+  function openModal2() {
+      document.getElementById("log_out").style.display = "flex";
+      document.body.classList.add("modal-active");
+  }
+
+  // Đóng modal
+  function closeModal2() {
+      document.getElementById("log_out").style.display = "none";
+      document.body.classList.remove("modal-active");
+  }
+
+</script> 
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

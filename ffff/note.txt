@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Realtime Database</title>
+
+  
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.3/dist/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://kit.fontawesome.com/9f25d43b0a.js" crossorigin="anonymous"></script>
+    <title>Sensor Status</title>
+    <link rel="stylesheet" href="./assert/reset.css">
+    <link rel="stylesheet" href="./assert/style.css">
+    
+
+    <script type="module">
+      let fireDetectedTime = null;
+      let fireDetected = false;
+      let tempMin = 0;
+      let tempMax = 60;
+      let humiMin = 0;
+      let humiMax = 100;
+      let chart1;
+      let chart2;
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import { getDatabase, ref, set, remove, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+      // import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+  
+
+      const firebaseConfig = {
+          apiKey: "AIzaSyCTv0WFKuNafqszXmI40v_DIOVPkNqp-78",
+          authDomain: "monitoring-sensor-4e47e.firebaseapp.com",
+          databaseURL: "https://monitoring-sensor-4e47e-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "monitoring-sensor-4e47e",
+          storageBucket: "monitoring-sensor-4e47e.appspot.com",
+          messagingSenderId: "935434093765",
+          appId: "1:935434093765:web:35353ee82daebe23e6dcac",
+          measurementId: "G-B6MXC3TY4R"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      const dbRef = ref(db); // Trỏ đến root để lấy tất cả các ngày
+  
+    let chartInstanceTemp = null; // Biến để lưu trữ đối tượng biểu đồ nhiệt độ
+    let chartInstanceHumi = null; // Biến để lưu trữ đối tượng biểu đồ độ ẩm
+
+
+
+    function saveSensorValues() {
+        fetch('r_read_values.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    return;
+                }
+                
+                // console.log('Sensor data:', data);
+                const reset_fire = document.getElementById('reset_fire');
+                const today = new Date();
+                const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+                const currentTime = new Date().toLocaleTimeString('vi-VN', {
+                    hour12: false,
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                const updates = {};
+
+                // Cập nhật dữ liệu cho các cảm biến nhiệt độ và độ ẩm
+                const sensorData = {
+                    'TemperatureC': data['b_sensor_TempC_values.txt'],
+                    'TemperatureF': data['b_sensor_TempF_values.txt'],
+                    'Humidity': data['c_sensor_Humi_values.txt']
+                };
+
+                for (const [sensorType, values] of Object.entries(sensorData)) {
+                    updates[sensorType] = {
+                        'MIN': `${values.min}`,
+                        'MAX': `${values.max}`,
+                        'AVG': `${values.average}`,
+                        'MIN_TIME': `${values.time_min}`,
+                        'MAX_TIME': `${values.time_max}`
+                    };
+                }
+
+                // Dữ liệu của cảm biến lửa
+                const fireData = data['a_sensor_Fire_values.txt'];
+                if (fireData) {
+                  updates['Fire'] = {
+                    isFire: fireData.isFire === '1', // true nếu giá trị là '1', false nếu không
+                    duration: fireData.duration || '00:00:00', // Để duration là số giây từ PHP hoặc giá trị mặc định
+                    time_detected: fireData.time_detected || 'N/A', // Thêm giá trị mặc định nếu undefined
+                    currentTime: currentTime,
+                    date_detected: fireData.date_detected || 'N/A' // Thêm giá trị mặc định nếu undefined
+                    };
+                  } else {
+                    // Xử lý khi không có dữ liệu về lửa
+                    updates['Fire'] = {
+                        isFire: false,
+                        duration: '00:00:00',
+                        time_detected: 'N/A',
+                        currentTime: currentTime,
+                        date_detected: 'N/A'
+                    };
+                  }
+                
+                // Xử lý sự kiện click nút reset
+                reset_fire.addEventListener('click', function() {
+                    updates['Fire'] = {
+                        isFire: false,
+                        duration: '00:00:00',
+                        time_detected: 'N/A',
+                        currentTime: currentTime,
+                        date_detected: 'N/A'
+                    };
+
+                    // Firebase database path should not contain special characters
+                    const validUpdates = {};
+                    for (const [key, value] of Object.entries(updates)) {
+                        // Sanitize key to avoid Firebase errors
+                        const sanitizedKey = key.replace(/[/\[\].#$]/g, '_');
+                        validUpdates[sanitizedKey] = value;
+                    }
+
+                    // Push the sanitized data to Firebase
+                    set(ref(db, `/${dateKey}`), validUpdates)
+                        .then(() => {
+                            console.log('Sensor values saved successfully after reset!');
+                        })
+                        .catch((error) => {
+                            console.error('Error saving sensor values after reset: ', error);
+                        });
+                });
+
+                // Firebase database path should not contain special characters
+                const validUpdates = {};
+                for (const [key, value] of Object.entries(updates)) {
+                    // Sanitize key to avoid Firebase errors
+                    const sanitizedKey = key.replace(/[/\[\].#$]/g, '_');
+                    validUpdates[sanitizedKey] = value;
+                }
+
+                // Push the sanitized data to Firebase
+                set(ref(db, `/${dateKey}`), validUpdates)
+                    .then(() => {
+                        console.log('Sensor values saved successfully!');
+                        // removeOldData(); // Nếu cần, có thể kích hoạt hàm để xóa dữ liệu cũ
+                    })
+                    .catch((error) => {
+                        console.error('Error saving sensor values: ', error);
+                    });
+            })
+            .catch((error) => {
+                console.error('Error fetching sensor values:', error);
+            });
+    }
+    // const reset_fire = document.getElementById('reset_fire');
+    document.getElementById('reset_fire').addEventListener('click', function() {
+      fetch('r_reset.php')
+          .then(response => response.text())
+          .then(data => {
+              console.log(data);  // Xem kết quả từ PHP script
+              alert('Fire data has been reset.');
+          })
+          .catch(error => {
+              console.error('Error:', error);
+          });
+  });
+
+
+    function updateBox(data) {
+      // console.log('Fetched daaaaaaaaaaaaaaata:', data); // Kiểm tra dữ liệu nhận được
+      
+      // Lấy ngày hiện tại
+      const today = new Date();
+      const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+
+      // Kiểm tra nếu dữ liệu có ngày hiện tại và thuộc tính Fire
+      if (data && data[dateKey] && data[dateKey].Fire) {
+          const fireData = data[dateKey].Fire;
+          
+          const statusBox = document.getElementById('statusBox1');
+          const text_noti_sensor_fire = document.getElementById('text_status1');
+          const time_detected = document.getElementById('time_detected');
+          const fire_duration = document.getElementById('fire_duration');
+          const date_detected = document.getElementById('date_detected');
+          
+
+          // Kiểm tra trạng thái lửa
+          if (fireData.isFire) {
+              statusBox.style.backgroundColor = 'red';
+              text_noti_sensor_fire.textContent = 'Có lửa';
+
+              // Hiển thị thời gian phát hiện và thời gian cháy
+              date_detected.textContent = `Date detected: ${fireData.date_detected}`;
+              time_detected.textContent = `Time detected: ${fireData.time_detected}`;
+              fire_duration.textContent = `Fire duration: ${fireData.duration}`; // Hiển thị thời gian cháy
+          } else {
+              statusBox.style.backgroundColor = 'green';
+              text_noti_sensor_fire.textContent = 'Không có lửa';
+              date_detected.textContent = `Date detected: `; 
+              time_detected.textContent = 'Time detected:';
+              fire_duration.textContent = 'Fire duration: ';
+          }
+  
+      } else {
+          console.error('Dữ liệu không hợp lệ hoặc không có dữ liệu về lửa:', data);
+      }
+  }
+
+
+
+function fetchDataFromFirebase() {
+  onValue(dbRef, (snapshot) => {
+    const data = snapshot.val();
+    // console.log('Dữ liệu từ Firebase:', data); // Kiểm tra dữ liệu nhận được
+    
+    if (data) {
+      // Cập nhật cả box và chart với dữ liệu từ Firebase
+      updateBox(data);
+      // updateChart(data);
+    } else {
+      console.error('Không có dữ liệu từ Firebase');
+    }
+  }, (error) => {
+    console.error('Lỗi khi lấy dữ liệu từ Firebase:', error);
+  });
+}
+
+    window.onload = function() {
+  
+      setInterval(saveSensorValues, 1000);     // Update Database
+      setInterval(updateBox, 1000);             // Update Box Fire in Main html
+      // setInterval(updateCharts, 1000);          // Update Box Temp & Humi in Main html
+      fetchDataFromFirebase();                  // Update 2 Chart Temp & Humi in Chart Bar html
+
+    };
+    
+    function showDiv(divNumber) {
+        // Ẩn tất cả các div
+        document.querySelectorAll('.bottom_content').forEach(div => {
+            div.style.display = 'none';
+        });
+
+        // Hiển thị div tương ứng với số nút bấm
+        document.getElementById(`dev${divNumber}`).style.display = 'block';
+    }
+
+    // Gán sự kiện onclick cho các nút bấm
+    document.querySelectorAll('.menu_left li').forEach((item, index) => {
+        item.addEventListener('click', () => showDiv(index + 1));
+    });
+
+    showDiv(1);
+
+  </script>
+</head>
+<body>
+  <div class="main_content">
+    <div class="container-fluid">
+      <div class="row">
+
+        <!-- LEFT -->
+        <div class="col-2">
+          <div class="task_table">
+            <div class="logo_part">
+              <div class="image_company">
+                <img src="./assert/img/logo.png" alt="">
+              </div>
+              <div class="title">
+                <h3>Monitoring Sensor</h3>
+              </div>
+            </div>
+
+            <div class="menu_left">
+              <ul>
+                <li><p>Main</p></li>
+                <li><p>Chart Line</p></li>
+                <li><p>Excel</p></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="col-10">
+          <div class="table_content">
+            <div class="top_content">
+              <div class="row">
+                <div class="col-12">
+                  <p>HEAD</p>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Nút 1 -->
+            <div id="dev1" class="bottom_content">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box col-4">
+                    <div class="sensor_title">
+                      
+                      <h3>Sensor of Flame</h3>
+                      <button id="stop_fire">Stop</button>
+                      <button id="reset_fire">Reset</button>
+                      <i class="fa-solid fa-fire"></i>
+                  
+                   
+                      
+                    </div>
+                    <div class="insite_box a">
+                      <div class="status" id="statusBox1">
+                        <p id="text_status1">Không có lửa</p>
+                      </div>
+                      <div class="show_time">
+                        <h3>Detected Time:</h3>
+                        <p id="date_detected"></p>
+                        <p id="time_detected"></p>
+                        <p id="fire_duration"></p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="sensor_box col-3">
+                    <div class="sensor_title">
+                      <h3>Sensor of Smoke</h3>
+                      <i class="fa-solid fa-smog"></i>
+                    </div>
+                    <div class="insite_box">
+                      <div class="status" id="statusBox3">
+                        <p id="text_status3">Không có lửa</p>
+                      </div>
+                    </div>
+                  </div>
+    
+                  <div class="sensor_box col-5">
+                    <div class="sensor_title">
+                      <h3>Setting sensors thresholds</h3>
+                      <i class="fa-solid fa-gear"></i>
+                    </div>
+                    <div class="insite_box">
+                      <div class="control_box">
+                        <button id="showSettingsBtn">Control Min - Max Values Sensor</button>
+                        <div id="settingsForm" style="display: none;">
+                          <div class="row">
+                            <div class="col-6">
+                              <div class="temp_input">
+                                <label for="tempMin">Temperature Min (°C):</label>
+                                <input type="number" id="tempMin" min="0" max="60" value="0" step="0.1">
+                                <br>
+                                <label for="tempMax">Temperature Max (°C):</label>
+                                <input type="number" id="tempMax" min="0" max="60" value="60" step="0.1">
+                              </div>
+                            </div>
+    
+                            <div class="col-6">
+                              <div class="humi_input">
+                                <label for="humiMin">Humidity Min (%):</label>
+                                <input type="number" id="humiMin" min="0" max="100" value="0" step="0.1">
+                                <br>
+                                <label for="humiMax">Humidity Max (%):</label>
+                                <input type="number" id="humiMax" min="0" max="100" value="100" step="0.1">
+                              </div>
+                            </div>
+                          </div>
+                          <button id="saveSettingsBtn">Lưu</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+      
+                  
+                </div>
+              </div>
+              <div class="line2">
+                <div class="row">
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Temperature Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box">
+                      <div class="status" id="statusBox_temp">
+                        <canvas id="myChart1"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="sensor_box col-6">
+                    <div class="sensor_title">
+                      <h3>Humidity Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box">
+                      <div class="status" id="statusBox_temp">
+                        <canvas id="myChart2"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+
+            <!-- Nút 2 -->
+            <div id="dev2" class="bottom_content">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box_web2_1 col-12">
+                    <div class="sensor_title">
+                      <h3>Temperature Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box2">
+                      <div class="status" id="statusBox_temp_web2">
+                        <canvas id="myChart3" ></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+    
+                <div class="row">
+                  <div class="sensor_box_web2_2 col-12">
+                    <div class="sensor_title">
+                      <h3>Humidity Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box2">
+                      <div class="status" id="statusBox_humi_web2">
+                        <canvas id="myChart4"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Nút 3 -->
+            <div id="dev3" class="bottom_content">
+              <div class="line">
+                <div class="row">
+                  <div class="sensor_box_web2_1 col-12">
+                    <div class="sensor_title">
+                      <h3>Temperature Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box2">
+                      <div class="status" id="statusBox_temp_web2">
+                        <canvas id="myChart3" ></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+    
+                <div class="row">
+                  <div class="sensor_box_web2_2 col-12">
+                    <div class="sensor_title">
+                      <h3>Humidity Chart</h3>
+                      <i class="fa-solid fa-temperature-three-quarters"></i>
+                    </div>
+                    <div class="insite_box2">
+                      <div class="status" id="statusBox_humi_web2">
+                        <canvas id="myChart4"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
